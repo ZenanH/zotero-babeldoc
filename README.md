@@ -57,7 +57,7 @@ uv pip install --python $BabelDocPython --upgrade "BabelDOC==0.6.4"
 
 ## 兼容性
 
-当前版本只适配 Zotero 10，并固定 BabelDOC 版本为 `0.6.4`。仓库中的每个版本标签都会由 GitHub Actions 自动构建并发布 XPI。
+当前版本只适配 Zotero 10，并固定 BabelDOC 版本为 `0.6.4`。仓库中的每个版本标签都会由 GitHub Actions 自动构建并发布 XPI。升级插件后请在 Zotero 的插件管理器中确认版本号已更新；旧版偏好页不会自动显示新版安装命令或图标。
 
 ## 上游版本提醒
 
