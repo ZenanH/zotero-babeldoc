@@ -1,5 +1,7 @@
 # Zotero BabelDOC
 
+![Zotero BabelDOC](https://raw.githubusercontent.com/ZenanH/zotero-babeldoc/main/addon/content/icons/favicon.png)
+
 Zotero 10 插件：从 Zotero 中直接调用本机的 BabelDOC 翻译 PDF，并把翻译结果作为同一篇文献的子附件保存。原始 PDF 不会被修改。项目主页和安装包位于 [GitHub](https://github.com/ZenanH/zotero-babeldoc)，最新安装包可从 [Releases](https://github.com/ZenanH/zotero-babeldoc/releases/latest) 下载。
 
 ## 功能
