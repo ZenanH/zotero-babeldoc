@@ -6,4 +6,4 @@ pref("target-language", "zh-CN");
 pref("qps", 10);
 pref("pool-max-workers", 8);
 pref("watermark-output-mode", "no_watermark");
-pref("last-babeldoc-path", "");
+pref("translation-output-mode", "mono");

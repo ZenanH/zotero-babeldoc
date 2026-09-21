@@ -1,7 +1,7 @@
 {
   "name": "zotero-babeldoc-translator",
   "type": "module",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Translate Zotero PDF attachments with a user-managed BabelDOC installation.",
   "repository": {
     "type": "git",

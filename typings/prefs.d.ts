@@ -15,7 +15,7 @@ declare namespace _ZoteroTypes {
       "qps": number;
       "pool-max-workers": number;
       "watermark-output-mode": string;
-      "last-babeldoc-path": string;
+      "translation-output-mode": string;
     };
   }
 }

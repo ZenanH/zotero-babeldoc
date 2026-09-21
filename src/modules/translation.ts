@@ -98,9 +98,14 @@ export async function translateSelectedPDF(win: Window): Promise<void> {
       outputDirectory,
       getFileStem(inputPath),
       settings.targetLanguage,
+      settings.translationOutputMode,
     );
     if (!outputPath) {
-      throw new Error("BabelDOC 已结束，但没有找到单语翻译 PDF。");
+      throw new Error(
+        settings.translationOutputMode === "dual"
+          ? "BabelDOC 已结束，但没有找到原文+译文 PDF。"
+          : "BabelDOC 已结束，但没有找到中文翻译 PDF。",
+      );
     }
 
     progress.update("导入 Zotero 子附件");
@@ -166,11 +171,13 @@ async function findTranslatedPDF(
   outputDirectory: string,
   inputStem: string,
   targetLanguage: string,
+  outputMode: "mono" | "dual",
 ): Promise<string | null> {
+  const suffix = outputMode === "dual" ? "dual" : "mono";
   const expected = [
-    `${inputStem}.no_watermark.${targetLanguage}.mono.pdf`,
-    `${inputStem}.${targetLanguage}.mono.pdf`,
-    `${inputStem}.debug.no_watermark.${targetLanguage}.mono.pdf`,
+    `${inputStem}.no_watermark.${targetLanguage}.${suffix}.pdf`,
+    `${inputStem}.${targetLanguage}.${suffix}.pdf`,
+    `${inputStem}.debug.no_watermark.${targetLanguage}.${suffix}.pdf`,
   ];
   for (const filename of expected) {
     const path = joinPath(outputDirectory, filename);
@@ -180,7 +187,7 @@ async function findTranslatedPDF(
   try {
     const children = await getIOUtils().getChildren(outputDirectory);
     const matches = (children as string[])
-      .filter((path) => /\.mono\.pdf$/i.test(path))
+      .filter((path) => new RegExp(`\\.${suffix}\\.pdf$`, "i").test(path))
       .sort()
       .reverse();
     return matches[0] || null;

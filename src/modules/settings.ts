@@ -2,6 +2,8 @@ import { config } from "../../package.json";
 
 export const REQUIRED_BABELDOC_VERSION = "0.6.4";
 
+export type TranslationOutputMode = "mono" | "dual";
+
 export interface TranslatorSettings {
   baseUrl: string;
   apiKey: string;
@@ -11,6 +13,7 @@ export interface TranslatorSettings {
   qps: number;
   poolMaxWorkers: number;
   watermarkOutputMode: "watermarked" | "no_watermark" | "both";
+  translationOutputMode: TranslationOutputMode;
 }
 
 export const DEFAULT_SETTINGS: TranslatorSettings = {
@@ -22,6 +25,7 @@ export const DEFAULT_SETTINGS: TranslatorSettings = {
   qps: 10,
   poolMaxWorkers: 8,
   watermarkOutputMode: "no_watermark",
+  translationOutputMode: "mono",
 };
 
 function getPref<T>(key: string, fallback: T): T {
@@ -46,6 +50,10 @@ export function getSettings(): TranslatorSettings {
     "watermark-output-mode",
     DEFAULT_SETTINGS.watermarkOutputMode,
   );
+  const translationOutput = getPref<string>(
+    "translation-output-mode",
+    DEFAULT_SETTINGS.translationOutputMode,
+  );
   return {
     baseUrl: getPref("base-url", DEFAULT_SETTINGS.baseUrl).trim(),
     apiKey: getPref("api-key", DEFAULT_SETTINGS.apiKey).trim(),
@@ -68,6 +76,7 @@ export function getSettings(): TranslatorSettings {
       watermark === "watermarked" || watermark === "both"
         ? watermark
         : "no_watermark",
+    translationOutputMode: translationOutput === "dual" ? "dual" : "mono",
   };
 }
 
@@ -80,14 +89,33 @@ export function saveSettings(settings: TranslatorSettings): void {
   setPref("qps", clampInteger(settings.qps, 1, 64));
   setPref("pool-max-workers", clampInteger(settings.poolMaxWorkers, 1, 64));
   setPref("watermark-output-mode", settings.watermarkOutputMode);
+  setPref("translation-output-mode", settings.translationOutputMode);
 }
 
-export function getLastBabelDocPath(): string {
-  return getPref("last-babeldoc-path", "").trim();
+export function getManagedBabelDocVenvPath(): string {
+  return joinPath(getHomeDirectory(), ".babeldoc-translator", "venv");
 }
 
-export function setLastBabelDocPath(path: string): void {
-  setPref("last-babeldoc-path", path);
+export function getManagedBabelDocPythonPath(): string {
+  const executableDirectory =
+    Services.appinfo.OS === "WINNT" ? "Scripts" : "bin";
+  const executable = Services.appinfo.OS === "WINNT" ? "python.exe" : "python";
+  return joinPath(
+    getManagedBabelDocVenvPath(),
+    executableDirectory,
+    executable,
+  );
+}
+
+export function getManagedBabelDocInstallCommand(): string {
+  const venvPath = getManagedBabelDocVenvPath();
+  const pythonPath = getManagedBabelDocPythonPath();
+  const quote = (value: string) => `"${value.replaceAll('"', '\\"')}"`;
+
+  return [
+    `uv venv --no-project --allow-existing --python 3.12 ${quote(venvPath)}`,
+    `uv pip install --python ${quote(pythonPath)} --upgrade "BabelDOC==${REQUIRED_BABELDOC_VERSION}"`,
+  ].join("\n");
 }
 
 export function validateSettings(settings: TranslatorSettings): void {
@@ -171,8 +199,8 @@ export function renderBabelDocToml(settings: TranslatorSettings): string {
     `openai-api-key = ${tomlString(settings.apiKey)}`,
     "enable-json-mode-if-requested = false",
     `pool-max-workers = ${clampInteger(settings.poolMaxWorkers, 1, 64)}`,
-    "no-dual = true",
-    "no-mono = false",
+    `no-dual = ${settings.translationOutputMode === "mono"}`,
+    `no-mono = ${settings.translationOutputMode === "dual"}`,
     "min-text-length = 5",
     "report-interval = 0.5",
     "",

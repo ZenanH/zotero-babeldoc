@@ -1,5 +1,6 @@
 import { testConnection } from "./api";
 import {
+  getManagedBabelDocInstallCommand,
   getSettings,
   saveSettings,
   TranslatorSettings,
@@ -30,6 +31,16 @@ export async function registerPrefsScripts(win: Window): Promise<void> {
     "babeldoctranslator-workers",
     String(settings.poolMaxWorkers),
   );
+  setChecked(
+    document,
+    "babeldoctranslator-output-mono",
+    settings.translationOutputMode === "mono",
+  );
+  setChecked(
+    document,
+    "babeldoctranslator-output-dual",
+    settings.translationOutputMode === "dual",
+  );
 
   const status = document.getElementById(
     "babeldoctranslator-status",
@@ -37,8 +48,14 @@ export async function registerPrefsScripts(win: Window): Promise<void> {
   const babeldocStatus = document.getElementById(
     "babeldoctranslator-babeldoc-status",
   ) as HTMLElement;
+  const installCommand = document.getElementById(
+    "babeldoctranslator-install-command",
+  ) as HTMLElement;
+  if (installCommand) {
+    installCommand.textContent = getManagedBabelDocInstallCommand();
+  }
   setStatus(status, "配置尚未测试。", "neutral");
-  setStatus(babeldocStatus, "正在检测 BabelDOC…", "neutral");
+  setStatus(babeldocStatus, "正在检测插件专用 BabelDOC…", "neutral");
 
   const saveButton = document.getElementById(
     "babeldoctranslator-save",
@@ -102,6 +119,12 @@ function readForm(document: Document): TranslatorSettings {
     qps: Number(getValue(document, "babeldoctranslator-qps")),
     poolMaxWorkers: Number(getValue(document, "babeldoctranslator-workers")),
     watermarkOutputMode: "no_watermark",
+    translationOutputMode: getChecked(
+      document,
+      "babeldoctranslator-output-dual",
+    )
+      ? "dual"
+      : "mono",
   };
 }
 
@@ -114,6 +137,15 @@ function getValue(document: Document, id: string): string {
 function setValue(document: Document, id: string, value: string): void {
   const input = document.getElementById(id) as HTMLInputElement | null;
   if (input) input.value = value;
+}
+
+function getChecked(document: Document, id: string): boolean {
+  return Boolean((document.getElementById(id) as HTMLInputElement)?.checked);
+}
+
+function setChecked(document: Document, id: string, checked: boolean): void {
+  const input = document.getElementById(id) as HTMLInputElement | null;
+  if (input) input.checked = checked;
 }
 
 function setStatus(

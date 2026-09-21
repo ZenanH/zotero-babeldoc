@@ -5,9 +5,10 @@
   <label><html:h2>BabelDOC Translator</html:h2></label>
 
   <description>
-    需要先在 Zotero 外安装固定版本 BabelDOC：
-    <html:code>uv tool install --python 3.12 "BabelDOC==0.6.4"</html:code>
+    请先在 Zotero 外运行以下命令。插件会使用独立的 Python
+    环境，不会使用或升级你已有的 BabelDOC：
   </description>
+  <html:pre id="babeldoctranslator-install-command" />
 
   <grid flex="1">
     <columns>
@@ -83,6 +84,29 @@
           step="1"
           value="8"
         />
+      </row>
+      <row align="center">
+        <html:label>翻译结果</html:label>
+        <hbox>
+          <html:label>
+            <html:input
+              id="babeldoctranslator-output-mono"
+              type="radio"
+              name="babeldoctranslator-output-mode"
+              value="mono"
+            />
+            仅中文翻译 PDF
+          </html:label>
+          <html:label>
+            <html:input
+              id="babeldoctranslator-output-dual"
+              type="radio"
+              name="babeldoctranslator-output-mode"
+              value="dual"
+            />
+            原文 + 中文（左右分页）
+          </html:label>
+        </hbox>
       </row>
     </rows>
   </grid>
