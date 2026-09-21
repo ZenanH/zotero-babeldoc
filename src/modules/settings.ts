@@ -108,13 +108,18 @@ export function getManagedBabelDocPythonPath(): string {
 }
 
 export function getManagedBabelDocInstallCommand(): string {
-  const venvPath = getManagedBabelDocVenvPath();
-  const pythonPath = getManagedBabelDocPythonPath();
-  const quote = (value: string) => `"${value.replaceAll('"', '\\"')}"`;
+  if (Services.appinfo.OS === "WINNT") {
+    return [
+      '$BabelDocVenv = Join-Path $HOME ".babeldoc-translator\\venv"',
+      '$BabelDocPython = Join-Path $BabelDocVenv "Scripts\\python.exe"',
+      "uv venv --no-project --allow-existing --python 3.12 $BabelDocVenv",
+      `uv pip install --python $BabelDocPython --upgrade "BabelDOC==${REQUIRED_BABELDOC_VERSION}"`,
+    ].join("\n");
+  }
 
   return [
-    `uv venv --no-project --allow-existing --python 3.12 ${quote(venvPath)}`,
-    `uv pip install --python ${quote(pythonPath)} --upgrade "BabelDOC==${REQUIRED_BABELDOC_VERSION}"`,
+    'uv venv --no-project --allow-existing --python 3.12 "$HOME/.babeldoc-translator/venv"',
+    `uv pip install --python "$HOME/.babeldoc-translator/venv/bin/python" --upgrade "BabelDOC==${REQUIRED_BABELDOC_VERSION}"`,
   ].join("\n");
 }
 

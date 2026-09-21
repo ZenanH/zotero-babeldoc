@@ -4,6 +4,7 @@
   "version": "__buildVersion__",
   "description": "__description__",
   "homepage_url": "__homepage__",
+  "icon": "icon.svg",
   "author": "__author__",
   "applications": {
     "zotero": {

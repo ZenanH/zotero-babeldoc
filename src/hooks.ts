@@ -18,6 +18,7 @@ async function onStartup(): Promise<void> {
     pluginID: addon.data.config.addonID,
     src: rootURI + "content/preferences.xhtml",
     label: "Zotero BabelDOC",
+    image: rootURI + "icon.svg",
   });
 
   await Promise.all(

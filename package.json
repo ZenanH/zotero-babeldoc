@@ -1,11 +1,11 @@
 {
   "name": "zotero-babeldoc",
   "type": "module",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Translate Zotero PDF attachments with an isolated BabelDOC installation.",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ZenanH/zotero-translatorbot.git"
+    "url": "git+https://github.com/ZenanH/zotero-babeldoc.git"
   },
   "config": {
     "addonName": "Zotero BabelDOC",

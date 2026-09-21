@@ -4,117 +4,141 @@
 >
   <label><html:h2>Zotero BabelDOC</html:h2></label>
 
-  <description>
-    请先在 Zotero 外运行以下命令。插件会使用独立的 Python
-    环境，不会使用或升级你已有的 BabelDOC：
-  </description>
-  <html:pre id="babeldoctranslator-install-command" />
+  <groupbox>
+    <label><html:h3>安装环境</html:h3></label>
+    <description>
+      请先在 Zotero 外运行以下命令。插件会使用独立的 Python
+      环境，不会使用或升级你已有的 BabelDOC：
+    </description>
+    <html:pre
+      id="babeldoctranslator-install-command"
+      style="white-space: pre-wrap; margin: 6px 0 10px 0"
+    />
+    <description id="babeldoctranslator-babeldoc-status" />
+  </groupbox>
 
-  <grid flex="1">
-    <columns>
-      <column flex="0" />
-      <column flex="1" />
-    </columns>
-    <rows>
-      <row align="center">
-        <html:label for="babeldoctranslator-base-url">Base URL</html:label>
-        <html:input
-          id="babeldoctranslator-base-url"
-          type="url"
-          flex="1"
-          placeholder="https://api.openai.com/v1"
-        />
-      </row>
-      <row align="center">
-        <html:label for="babeldoctranslator-api-key">API Key</html:label>
-        <html:input
-          id="babeldoctranslator-api-key"
-          type="password"
-          flex="1"
-          autocomplete="off"
-        />
-      </row>
-      <row align="center">
-        <html:label for="babeldoctranslator-model">模型</html:label>
-        <html:input
-          id="babeldoctranslator-model"
-          type="text"
-          flex="1"
-          placeholder="gpt-4o-mini"
-        />
-      </row>
-      <row align="center">
-        <html:label for="babeldoctranslator-source-language">源语言</html:label>
-        <html:input
-          id="babeldoctranslator-source-language"
-          type="text"
-          flex="1"
-          placeholder="en"
-        />
-      </row>
-      <row align="center">
-        <html:label for="babeldoctranslator-target-language"
-          >目标语言</html:label
-        >
-        <html:input
-          id="babeldoctranslator-target-language"
-          type="text"
-          flex="1"
-          placeholder="zh-CN"
-        />
-      </row>
-      <row align="center">
-        <html:label for="babeldoctranslator-qps">并发请求数</html:label>
-        <html:input
-          id="babeldoctranslator-qps"
-          type="number"
-          min="1"
-          max="64"
-          step="1"
-          value="10"
-        />
-      </row>
-      <row align="center">
-        <html:label for="babeldoctranslator-workers">处理线程数</html:label>
-        <html:input
-          id="babeldoctranslator-workers"
-          type="number"
-          min="1"
-          max="64"
-          step="1"
-          value="8"
-        />
-      </row>
-      <row align="center">
-        <html:label>翻译结果</html:label>
-        <hbox>
-          <html:label>
-            <html:input
-              id="babeldoctranslator-output-mono"
-              type="radio"
-              name="babeldoctranslator-output-mode"
-              value="mono"
-            />
-            仅中文翻译 PDF
-          </html:label>
-          <html:label>
-            <html:input
-              id="babeldoctranslator-output-dual"
-              type="radio"
-              name="babeldoctranslator-output-mode"
-              value="dual"
-            />
-            原文 + 中文（左右分页）
-          </html:label>
-        </hbox>
-      </row>
-    </rows>
-  </grid>
+  <groupbox>
+    <label><html:h3>API 配置</html:h3></label>
+    <grid flex="1">
+      <columns>
+        <column flex="0" />
+        <column flex="1" />
+      </columns>
+      <rows>
+        <row align="center">
+          <html:label for="babeldoctranslator-base-url">Base URL</html:label>
+          <html:input
+            id="babeldoctranslator-base-url"
+            type="url"
+            flex="1"
+            placeholder="https://api.openai.com/v1"
+          />
+        </row>
+        <row align="center">
+          <html:label for="babeldoctranslator-api-key">API Key</html:label>
+          <html:input
+            id="babeldoctranslator-api-key"
+            type="password"
+            flex="1"
+            autocomplete="off"
+          />
+        </row>
+        <row align="center">
+          <html:label for="babeldoctranslator-model">模型</html:label>
+          <html:input
+            id="babeldoctranslator-model"
+            type="text"
+            flex="1"
+            placeholder="gpt-4o-mini"
+          />
+        </row>
+      </rows>
+    </grid>
+  </groupbox>
 
-  <hbox align="center" pack="start">
-    <button id="babeldoctranslator-save" label="保存配置" />
+  <groupbox>
+    <label><html:h3>翻译参数</html:h3></label>
+    <grid flex="1">
+      <columns>
+        <column flex="0" />
+        <column flex="1" />
+      </columns>
+      <rows>
+        <row align="center">
+          <html:label for="babeldoctranslator-source-language"
+            >源语言</html:label
+          >
+          <html:input
+            id="babeldoctranslator-source-language"
+            type="text"
+            flex="1"
+            placeholder="en"
+          />
+        </row>
+        <row align="center">
+          <html:label for="babeldoctranslator-target-language"
+            >目标语言</html:label
+          >
+          <html:input
+            id="babeldoctranslator-target-language"
+            type="text"
+            flex="1"
+            placeholder="zh-CN"
+          />
+        </row>
+        <row align="center">
+          <html:label for="babeldoctranslator-qps">并发请求数</html:label>
+          <html:input
+            id="babeldoctranslator-qps"
+            type="number"
+            min="1"
+            max="64"
+            step="1"
+            value="10"
+          />
+        </row>
+        <row align="center">
+          <html:label for="babeldoctranslator-workers">处理线程数</html:label>
+          <html:input
+            id="babeldoctranslator-workers"
+            type="number"
+            min="1"
+            max="64"
+            step="1"
+            value="8"
+          />
+        </row>
+      </rows>
+    </grid>
+  </groupbox>
+
+  <groupbox>
+    <label><html:h3>翻译结果</html:h3></label>
+    <vbox>
+      <html:label>
+        <html:input
+          id="babeldoctranslator-output-mono"
+          type="radio"
+          name="babeldoctranslator-output-mode"
+          value="mono"
+        />
+        仅中文翻译 PDF
+      </html:label>
+      <html:label>
+        <html:input
+          id="babeldoctranslator-output-dual"
+          type="radio"
+          name="babeldoctranslator-output-mode"
+          value="dual"
+        />
+        原文 + 中文（左右分页）
+      </html:label>
+    </vbox>
+  </groupbox>
+
+  <hbox align="center" pack="end" style="margin-top: 10px">
     <button id="babeldoctranslator-test" label="测试 Base URL / Key" />
+    <button id="babeldoctranslator-save" label="保存配置" />
   </hbox>
   <description id="babeldoctranslator-status" />
-  <description id="babeldoctranslator-babeldoc-status" />
 </groupbox>
