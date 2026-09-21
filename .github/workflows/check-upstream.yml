@@ -14,12 +14,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
       - name: Check Zotero and BabelDOC versions
         uses: actions/github-script@v7
         with:
           script: |
             const supportedZoteroMajor = 10;
-            const pinnedBabeldoc = "0.6.4";
+            const packageJson = require(`${process.env.GITHUB_WORKSPACE}/package.json`);
+            const pinnedBabeldoc = packageJson.config.babeldocVersion;
             const owner = context.repo.owner;
             const repo = context.repo.repo;
 

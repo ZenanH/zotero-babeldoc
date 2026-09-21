@@ -11,13 +11,15 @@ Zotero 10 插件：从 Zotero 中直接调用本机的 BabelDOC 翻译 PDF，并
 - BabelDOC 使用独立的 uv 虚拟环境，不会修改用户已有的 BabelDOC。
 - 翻译结果自动添加到原文献下。
 
-## 安装 BabelDOC
+## 安装 uv 和 BabelDOC
 
-请先在 Zotero 外安装 [uv](https://docs.astral.sh/uv/)，再创建插件专用环境。插件当前固定使用 `BabelDOC==0.6.4`。
+请在 Zotero 外完成以下两步。第一步安装 [uv](https://docs.astral.sh/uv/)，第二步创建插件专用环境并安装固定版本的 BabelDOC。插件当前固定使用 `BabelDOC==0.6.4`。
 
 macOS/Linux：
 
 ```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+export PATH="$HOME/.local/bin:$PATH"
 uv venv --no-project --allow-existing --python 3.12 "$HOME/.babeldoc-translator/venv"
 uv pip install --python "$HOME/.babeldoc-translator/venv/bin/python" --upgrade "BabelDOC==0.6.4"
 ```
@@ -25,6 +27,8 @@ uv pip install --python "$HOME/.babeldoc-translator/venv/bin/python" --upgrade "
 Windows PowerShell：
 
 ```powershell
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+$env:Path = "$HOME\.local\bin;$env:Path"
 $BabelDocVenv = Join-Path $HOME ".babeldoc-translator\venv"
 $BabelDocPython = Join-Path $BabelDocVenv "Scripts\python.exe"
 uv venv --no-project --allow-existing --python 3.12 $BabelDocVenv
@@ -32,6 +36,12 @@ uv pip install --python $BabelDocPython --upgrade "BabelDOC==0.6.4"
 ```
 
 安装插件后，也可以直接复制 Zotero 设置页显示的对应命令。插件只检测这个独立环境中的 BabelDOC；用户之后升级自己的全局 BabelDOC，不会影响 Zotero 翻译环境。
+
+## BabelDOC 版本升级
+
+插件会严格检查插件要求的 BabelDOC 版本。如果未来插件支持新版本，发布说明和设置页中的安装命令会显示新的固定版本。旧用户只需在 Zotero 外重新运行该命令：它会复用 `~/.babeldoc-translator/venv`，并在其中升级到新的精确版本，不会影响用户自己的全局 BabelDOC，也不需要删除旧环境。
+
+插件不会自动联网升级 BabelDOC。这样可以避免翻译任务在用户不知情时改变依赖；用户确认升级命令后，再安装新版本插件即可。
 
 ## 配置与使用
 
