@@ -1,1 +1,1 @@
-plugin-name = BabelDOC 翻译器
+plugin-name = Zotero BabelDOC

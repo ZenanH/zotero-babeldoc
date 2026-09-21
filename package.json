@@ -1,14 +1,14 @@
 {
-  "name": "zotero-babeldoc-translator",
+  "name": "zotero-babeldoc",
   "type": "module",
-  "version": "0.1.1",
-  "description": "Translate Zotero PDF attachments with a user-managed BabelDOC installation.",
+  "version": "0.1.2",
+  "description": "Translate Zotero PDF attachments with an isolated BabelDOC installation.",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ZenanH/zotero-translatorbot.git"
   },
   "config": {
-    "addonName": "BabelDOC Translator",
+    "addonName": "Zotero BabelDOC",
     "addonID": "babeldoc-translator@zhuo.local",
     "addonRef": "babeldoctranslator",
     "addonInstance": "BabelDocTranslator",

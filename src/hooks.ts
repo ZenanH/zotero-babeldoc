@@ -17,7 +17,7 @@ async function onStartup(): Promise<void> {
   Zotero.PreferencePanes.register({
     pluginID: addon.data.config.addonID,
     src: rootURI + "content/preferences.xhtml",
-    label: "BabelDOC Translator",
+    label: "Zotero BabelDOC",
   });
 
   await Promise.all(
