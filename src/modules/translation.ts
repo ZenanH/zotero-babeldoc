@@ -17,6 +17,9 @@ import { runExternalProcess } from "./process";
 import { getSelectedPdfAttachment } from "./menu";
 
 const activeAttachments = new Set<number>();
+const activeProgressWindows = new Set<{
+  refresh(): void;
+}>();
 
 export async function translateSelectedPDF(win: Window): Promise<void> {
   const attachment = getSelectedPdfAttachment(win);
@@ -48,6 +51,7 @@ export async function translateSelectedPDF(win: Window): Promise<void> {
   activeAttachments.add(attachment.id);
   try {
     progress = createProgressWindow();
+    refreshProgressWindows();
     progress.update("准备 PDF");
 
     const inputPath = await getAttachmentPath(attachment);
@@ -130,29 +134,56 @@ export async function translateSelectedPDF(win: Window): Promise<void> {
     else win.alert(message);
   } finally {
     activeAttachments.delete(attachment.id);
+    refreshProgressWindows();
     if (taskDirectory) await removeDirectory(taskDirectory);
   }
 }
 
 function createProgressWindow() {
   const progressWindow = new ztoolkit.ProgressWindow(config.addonName, {
-    closeOnClick: true,
+    closeOnClick: false,
     closeTime: -1,
   });
-  progressWindow.createLine({ text: "准备翻译", type: "default" }).show();
-  return {
+  let currentText = "准备翻译";
+  const controller = {
+    refresh() {
+      progressWindow.changeLine({
+        text: formatProgressText(currentText),
+        type: "default",
+      });
+    },
     update(text: string) {
-      progressWindow.changeLine({ text, type: "default" });
+      currentText = text;
+      progressWindow.changeLine({
+        text: formatProgressText(text),
+        type: "default",
+      });
     },
     finish(text: string) {
       progressWindow.changeLine({ text, type: "success" });
+      activeProgressWindows.delete(controller);
       progressWindow.startCloseTimer(5000);
     },
     fail(text: string) {
       progressWindow.changeLine({ text, type: "fail" });
+      activeProgressWindows.delete(controller);
       progressWindow.startCloseTimer(12000);
     },
   };
+  progressWindow
+    .createLine({ text: formatProgressText(currentText), type: "default" })
+    .show();
+  activeProgressWindows.add(controller);
+  return controller;
+}
+
+function refreshProgressWindows(): void {
+  for (const progress of activeProgressWindows) progress.refresh();
+}
+
+function formatProgressText(text: string): string {
+  const count = activeAttachments.size;
+  return `${text}（正在进行 ${count} 个翻译任务）`;
 }
 
 async function getAttachmentPath(attachment: any): Promise<string> {
