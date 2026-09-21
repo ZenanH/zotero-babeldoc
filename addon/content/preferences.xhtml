@@ -1,0 +1,96 @@
+<groupbox
+  id="babeldoctranslator-preferences"
+  onload="Zotero.BabelDocTranslator.hooks.onPrefsEvent('load', { window })"
+>
+  <label><html:h2>BabelDOC Translator</html:h2></label>
+
+  <description>
+    需要先在 Zotero 外安装固定版本 BabelDOC：
+    <html:code>uv tool install --python 3.12 "BabelDOC==0.6.4"</html:code>
+  </description>
+
+  <grid flex="1">
+    <columns>
+      <column flex="0" />
+      <column flex="1" />
+    </columns>
+    <rows>
+      <row align="center">
+        <html:label for="babeldoctranslator-base-url">Base URL</html:label>
+        <html:input
+          id="babeldoctranslator-base-url"
+          type="url"
+          flex="1"
+          placeholder="https://api.openai.com/v1"
+        />
+      </row>
+      <row align="center">
+        <html:label for="babeldoctranslator-api-key">API Key</html:label>
+        <html:input
+          id="babeldoctranslator-api-key"
+          type="password"
+          flex="1"
+          autocomplete="off"
+        />
+      </row>
+      <row align="center">
+        <html:label for="babeldoctranslator-model">模型</html:label>
+        <html:input
+          id="babeldoctranslator-model"
+          type="text"
+          flex="1"
+          placeholder="gpt-4o-mini"
+        />
+      </row>
+      <row align="center">
+        <html:label for="babeldoctranslator-source-language">源语言</html:label>
+        <html:input
+          id="babeldoctranslator-source-language"
+          type="text"
+          flex="1"
+          placeholder="en"
+        />
+      </row>
+      <row align="center">
+        <html:label for="babeldoctranslator-target-language"
+          >目标语言</html:label
+        >
+        <html:input
+          id="babeldoctranslator-target-language"
+          type="text"
+          flex="1"
+          placeholder="zh-CN"
+        />
+      </row>
+      <row align="center">
+        <html:label for="babeldoctranslator-qps">并发请求数</html:label>
+        <html:input
+          id="babeldoctranslator-qps"
+          type="number"
+          min="1"
+          max="64"
+          step="1"
+          value="10"
+        />
+      </row>
+      <row align="center">
+        <html:label for="babeldoctranslator-workers">处理线程数</html:label>
+        <html:input
+          id="babeldoctranslator-workers"
+          type="number"
+          min="1"
+          max="64"
+          step="1"
+          value="8"
+        />
+      </row>
+    </rows>
+  </grid>
+
+  <hbox align="center" pack="start">
+    <button id="babeldoctranslator-save" label="保存配置" />
+    <button id="babeldoctranslator-test" label="测试 Base URL / Key" />
+  </hbox>
+  <description id="babeldoctranslator-status" />
+  <description id="babeldoctranslator-babeldoc-status" />
+</groupbox>

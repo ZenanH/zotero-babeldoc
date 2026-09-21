@@ -1,0 +1,8 @@
+node_modules/
+.pnpm-store/
+.scaffold/
+dist/
+*.xpi
+*.tsbuildinfo
+.env
+.DS_Store

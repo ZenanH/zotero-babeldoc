@@ -1,0 +1,46 @@
+name: Build plugin
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --config.block-exotic-subdeps=false
+
+      - name: Check formatting and lint
+        run: pnpm run lint:check
+
+      - name: Build XPI
+        run: pnpm run build
+
+      - name: Upload XPI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: babel-doc-translator-xpi
+          path: .scaffold/build/*.xpi
+          if-no-files-found: error
+          retention-days: 14
