@@ -18,7 +18,7 @@ export default defineConfig({
       ...pkg.config,
       author: "Zhuo",
       description: pkg.description,
-      homepage: "https://github.com/",
+      homepage: "https://github.com/ZenanH/zotero-translatorbot",
       buildVersion: pkg.version,
       buildTime: "{{buildTime}}",
     },
