@@ -7,11 +7,17 @@
   <groupbox>
     <label><html:h3>安装环境</html:h3></label>
     <description>
-      请先在 Zotero 外运行以下命令。插件会使用独立的 Python
-      环境，不会使用或升级你已有的 BabelDOC：
+      请根据操作系统在 Zotero 外运行对应命令。每组命令都会先安装 uv，
+      再创建插件专用的 Python 环境并安装固定版本 BabelDOC：
     </description>
+    <html:h4 style="margin-bottom: 0">macOS / Linux</html:h4>
     <html:pre
-      id="babeldoctranslator-install-command"
+      id="babeldoctranslator-install-command-unix"
+      style="white-space: pre-wrap; margin: 6px 0 10px 0"
+    />
+    <html:h4 style="margin-bottom: 0">Windows PowerShell</html:h4>
+    <html:pre
+      id="babeldoctranslator-install-command-windows"
       style="white-space: pre-wrap; margin: 6px 0 10px 0"
     />
     <description id="babeldoctranslator-babeldoc-status" />

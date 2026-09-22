@@ -1,7 +1,8 @@
 import { testConnection } from "./api";
 import {
-  getManagedBabelDocInstallCommand,
   getSettings,
+  getUnixBabelDocInstallCommand,
+  getWindowsBabelDocInstallCommand,
   saveSettings,
   TranslatorSettings,
   validateSettings,
@@ -48,11 +49,17 @@ export async function registerPrefsScripts(win: Window): Promise<void> {
   const babeldocStatus = document.getElementById(
     "babeldoctranslator-babeldoc-status",
   ) as HTMLElement;
-  const installCommand = document.getElementById(
-    "babeldoctranslator-install-command",
+  const unixInstallCommand = document.getElementById(
+    "babeldoctranslator-install-command-unix",
   ) as HTMLElement;
-  if (installCommand) {
-    installCommand.textContent = getManagedBabelDocInstallCommand();
+  if (unixInstallCommand) {
+    unixInstallCommand.textContent = getUnixBabelDocInstallCommand();
+  }
+  const windowsInstallCommand = document.getElementById(
+    "babeldoctranslator-install-command-windows",
+  ) as HTMLElement;
+  if (windowsInstallCommand) {
+    windowsInstallCommand.textContent = getWindowsBabelDocInstallCommand();
   }
   setStatus(status, "配置尚未测试。", "neutral");
   setStatus(babeldocStatus, "正在检测插件专用 BabelDOC…", "neutral");

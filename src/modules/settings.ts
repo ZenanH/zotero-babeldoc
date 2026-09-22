@@ -108,22 +108,28 @@ export function getManagedBabelDocPythonPath(): string {
 }
 
 export function getManagedBabelDocInstallCommand(): string {
-  if (Services.appinfo.OS === "WINNT") {
-    return [
-      'powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"',
-      '$env:Path = "$HOME\\.local\\bin;$env:Path"',
-      '$BabelDocVenv = Join-Path $HOME ".babeldoc-translator\\venv"',
-      '$BabelDocPython = Join-Path $BabelDocVenv "Scripts\\python.exe"',
-      "uv venv --no-project --allow-existing --python 3.12 $BabelDocVenv",
-      `uv pip install --python $BabelDocPython --upgrade "BabelDOC==${REQUIRED_BABELDOC_VERSION}"`,
-    ].join("\n");
-  }
+  return Services.appinfo.OS === "WINNT"
+    ? getWindowsBabelDocInstallCommand()
+    : getUnixBabelDocInstallCommand();
+}
 
+export function getUnixBabelDocInstallCommand(): string {
   return [
     "curl -LsSf https://astral.sh/uv/install.sh | sh",
     'export PATH="$HOME/.local/bin:$PATH"',
     'uv venv --no-project --allow-existing --python 3.12 "$HOME/.babeldoc-translator/venv"',
     `uv pip install --python "$HOME/.babeldoc-translator/venv/bin/python" --upgrade "BabelDOC==${REQUIRED_BABELDOC_VERSION}"`,
+  ].join("\n");
+}
+
+export function getWindowsBabelDocInstallCommand(): string {
+  return [
+    'powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"',
+    '$env:Path = "$HOME\\.local\\bin;$env:Path"',
+    '$BabelDocVenv = Join-Path $HOME ".babeldoc-translator\\venv"',
+    '$BabelDocPython = Join-Path $BabelDocVenv "Scripts\\python.exe"',
+    "uv venv --no-project --allow-existing --python 3.12 $BabelDocVenv",
+    `uv pip install --python $BabelDocPython --upgrade "BabelDOC==${REQUIRED_BABELDOC_VERSION}"`,
   ].join("\n");
 }
 
