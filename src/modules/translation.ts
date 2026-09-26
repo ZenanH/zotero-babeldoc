@@ -17,9 +17,16 @@ import { runExternalProcess } from "./process";
 import { getSelectedPdfAttachment } from "./menu";
 
 const activeAttachments = new Set<number>();
-const activeProgressWindows = new Set<{
-  refresh(): void;
-}>();
+const activeTasks = new Map<
+  number,
+  { label: string; stage: string; updatedAt: number }
+>();
+let sharedProgressWindow: Zotero.ProgressWindow | null = null;
+let sharedProgressLine: _ZoteroTypes.ItemProgress | null = null;
+let sharedProgressCloseTimer: ReturnType<typeof setTimeout> | null = null;
+let completedTaskCount = 0;
+let failedTaskCount = 0;
+let lastFailureMessage = "";
 
 export async function translateSelectedPDF(win: Window): Promise<void> {
   const attachment = getSelectedPdfAttachment(win);
@@ -46,31 +53,29 @@ export async function translateSelectedPDF(win: Window): Promise<void> {
     return;
   }
 
-  let progress: any;
   let taskDirectory = "";
   activeAttachments.add(attachment.id);
+  registerTranslationTask(attachment, win);
   try {
-    progress = createProgressWindow();
-    refreshProgressWindows();
-    progress.update("准备 PDF");
+    updateTranslationTask(attachment.id, "准备 PDF");
 
     const inputPath = await getAttachmentPath(attachment);
     if (!inputPath || !(await pathExists(inputPath))) {
       throw new Error("找不到 PDF 的本地文件。请确认附件已下载到本机。");
     }
 
-    progress.update("检测 BabelDOC");
+    updateTranslationTask(attachment.id, "检测 BabelDOC");
     const babeldoc = await detectBabelDoc();
     taskDirectory = await createTaskDirectory();
     const outputDirectory = joinPath(taskDirectory, "output");
     const workingDirectory = joinPath(taskDirectory, "working");
     const taskConfigPath = joinPath(taskDirectory, "babeldoc.toml");
 
-    progress.update("保存 BabelDOC 配置");
+    updateTranslationTask(attachment.id, "保存 BabelDOC 配置");
     await writeManagedConfig(settings);
     await writeTextAtomically(taskConfigPath, renderBabelDocToml(settings));
 
-    progress.update(`启动 BabelDOC ${babeldoc.version}`);
+    updateTranslationTask(attachment.id, `BabelDOC ${babeldoc.version} 翻译中`);
     const result = await runExternalProcess(
       babeldoc.path,
       [
@@ -97,7 +102,7 @@ export async function translateSelectedPDF(win: Window): Promise<void> {
       );
     }
 
-    progress.update("查找翻译结果");
+    updateTranslationTask(attachment.id, "查找翻译结果");
     const outputPath = await findTranslatedPDF(
       outputDirectory,
       getFileStem(inputPath),
@@ -112,7 +117,7 @@ export async function translateSelectedPDF(win: Window): Promise<void> {
       );
     }
 
-    progress.update("导入 Zotero 子附件");
+    updateTranslationTask(attachment.id, "导入 Zotero 子附件");
     const parentItem = (await Zotero.Items.getAsync(parentID)) as any;
     const parentTitle = parentItem?.getField("title") || getFileStem(inputPath);
     const imported = await Zotero.Attachments.importFromFile({
@@ -126,64 +131,134 @@ export async function translateSelectedPDF(win: Window): Promise<void> {
     } catch {
       // Selection is only a convenience and should not affect a successful import.
     }
-    progress.finish("翻译完成，结果已添加到同一文献下。");
+    finishTranslationTask(attachment.id, true);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     ztoolkit.log("BabelDOC translation failed", error);
-    if (progress) progress.fail(message);
-    else win.alert(message);
+    finishTranslationTask(attachment.id, false, message);
   } finally {
     activeAttachments.delete(attachment.id);
-    refreshProgressWindows();
     if (taskDirectory) await removeDirectory(taskDirectory);
   }
 }
 
-function createProgressWindow() {
-  const progressWindow = new ztoolkit.ProgressWindow(config.addonName, {
-    closeOnClick: false,
-    closeTime: -1,
+function registerTranslationTask(attachment: any, win: Window): void {
+  clearSharedProgressCloseTimer();
+  if (!sharedProgressWindow) {
+    completedTaskCount = 0;
+    failedTaskCount = 0;
+    lastFailureMessage = "";
+    sharedProgressWindow = new Zotero.ProgressWindow({
+      window: win,
+      closeOnClick: false,
+    });
+    sharedProgressWindow.changeHeadline(config.addonName);
+    sharedProgressLine = new sharedProgressWindow.ItemProgress(
+      "",
+      "正在准备 Zotero BabelDOC 翻译任务，请稍候...",
+    );
+    sharedProgressWindow.show();
+  }
+
+  const label = String(
+    attachment.getField?.("title") ||
+      attachment.attachmentFilename ||
+      `PDF ${attachment.id}`,
+  );
+  activeTasks.set(attachment.id, {
+    label,
+    stage: "等待开始",
+    updatedAt: Date.now(),
   });
-  let currentText = "准备翻译";
-  const controller = {
-    refresh() {
-      progressWindow.changeLine({
-        text: formatProgressText(currentText),
-        type: "default",
-      });
-    },
-    update(text: string) {
-      currentText = text;
-      progressWindow.changeLine({
-        text: formatProgressText(text),
-        type: "default",
-      });
-    },
-    finish(text: string) {
-      progressWindow.changeLine({ text, type: "success" });
-      activeProgressWindows.delete(controller);
-      progressWindow.startCloseTimer(5000);
-    },
-    fail(text: string) {
-      progressWindow.changeLine({ text, type: "fail" });
-      activeProgressWindows.delete(controller);
-      progressWindow.startCloseTimer(12000);
-    },
-  };
-  progressWindow
-    .createLine({ text: formatProgressText(currentText), type: "default" })
-    .show();
-  activeProgressWindows.add(controller);
-  return controller;
+  refreshSharedProgressWindow();
 }
 
-function refreshProgressWindows(): void {
-  for (const progress of activeProgressWindows) progress.refresh();
+function updateTranslationTask(attachmentID: number, stage: string): void {
+  const task = activeTasks.get(attachmentID);
+  if (!task) return;
+  task.stage = stage;
+  task.updatedAt = Date.now();
+  refreshSharedProgressWindow();
 }
 
-function formatProgressText(text: string): string {
-  const count = activeAttachments.size;
-  return `${text}（正在进行 ${count} 个翻译任务）`;
+function finishTranslationTask(
+  attachmentID: number,
+  success: boolean,
+  errorMessage = "",
+): void {
+  const task = activeTasks.get(attachmentID);
+  if (!task) return;
+  activeTasks.delete(attachmentID);
+  if (success) completedTaskCount += 1;
+  else {
+    failedTaskCount += 1;
+    lastFailureMessage = errorMessage;
+  }
+
+  if (activeTasks.size > 0) {
+    refreshSharedProgressWindow();
+    return;
+  }
+
+  sharedProgressWindow?.changeHeadline(
+    config.addonName,
+    undefined,
+    " · 全部任务已结束",
+  );
+  sharedProgressLine?.setText(
+    failedTaskCount === 0
+      ? `翻译完成：成功 ${completedTaskCount} 个任务`
+      : `任务结束：成功 ${completedTaskCount}，失败 ${failedTaskCount}。${compactProgressError(lastFailureMessage)}`,
+  );
+  sharedProgressCloseTimer = setTimeout(
+    closeSharedProgressWindow,
+    failedTaskCount > 0 ? 12000 : 5000,
+  );
+}
+
+function refreshSharedProgressWindow(): void {
+  if (!sharedProgressWindow || !sharedProgressLine || activeTasks.size === 0) {
+    return;
+  }
+  const latestTask = [...activeTasks.values()].sort(
+    (left, right) => right.updatedAt - left.updatedAt,
+  )[0];
+  const completed = completedTaskCount + failedTaskCount;
+  sharedProgressWindow.changeHeadline(
+    config.addonName,
+    undefined,
+    ` · ${activeTasks.size} 个任务进行中`,
+  );
+  sharedProgressLine.setText(
+    `${truncateProgressLabel(latestTask.label)}：${latestTask.stage}${
+      completed > 0 ? `（本轮已结束 ${completed} 个）` : ""
+    }`,
+  );
+}
+
+function closeSharedProgressWindow(): void {
+  sharedProgressWindow?.close();
+  sharedProgressWindow = null;
+  sharedProgressLine = null;
+  sharedProgressCloseTimer = null;
+  completedTaskCount = 0;
+  failedTaskCount = 0;
+  lastFailureMessage = "";
+}
+
+function clearSharedProgressCloseTimer(): void {
+  if (sharedProgressCloseTimer === null) return;
+  clearTimeout(sharedProgressCloseTimer);
+  sharedProgressCloseTimer = null;
+}
+
+function truncateProgressLabel(label: string): string {
+  return label.length > 42 ? `${label.slice(0, 39)}...` : label;
+}
+
+function compactProgressError(message: string): string {
+  const compact = message.replace(/\s+/g, " ").trim();
+  return compact.length > 120 ? `${compact.slice(0, 117)}...` : compact;
 }
 
 async function getAttachmentPath(attachment: any): Promise<string> {
