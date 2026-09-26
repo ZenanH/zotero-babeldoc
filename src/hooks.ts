@@ -1,6 +1,11 @@
 import { config } from "../package.json";
 import { registerPrefsScripts } from "./modules/preferenceScript";
 import {
+  registerTranslationStatusBar,
+  unregisterTranslationStatusBar,
+  unregisterTranslationStatusBars,
+} from "./modules/statusBar";
+import {
   registerMainWindowMenu,
   unregisterMainWindowMenu,
   unregisterMainWindowMenus,
@@ -29,14 +34,17 @@ async function onStartup(): Promise<void> {
 async function onMainWindowLoad(win: _ZoteroTypes.MainWindow): Promise<void> {
   addon.data.ztoolkit = createZToolkit();
   registerMainWindowMenu(win);
+  registerTranslationStatusBar(win);
 }
 
 async function onMainWindowUnload(win: Window): Promise<void> {
   unregisterMainWindowMenu(win);
+  unregisterTranslationStatusBar(win);
 }
 
 function onShutdown(): void {
   unregisterMainWindowMenus();
+  unregisterTranslationStatusBars();
   addon.data.alive = false;
   addon.data.initialized = false;
   delete (_globalThis.Zotero as Record<string, any>)[config.addonInstance];

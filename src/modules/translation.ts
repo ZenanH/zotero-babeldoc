@@ -1,4 +1,3 @@
-import { config } from "../../package.json";
 import {
   createTaskDirectory,
   getFileStem,
@@ -15,15 +14,18 @@ import {
 import { detectBabelDoc } from "./babeldoc";
 import { runExternalProcess } from "./process";
 import { getSelectedPdfAttachment } from "./menu";
+import {
+  hideTranslationStatusBar,
+  registerTranslationStatusBar,
+  showTranslationStatusBar,
+} from "./statusBar";
 
 const activeAttachments = new Set<number>();
 const activeTasks = new Map<
   number,
   { label: string; stage: string; updatedAt: number }
 >();
-let sharedProgressWindow: Zotero.ProgressWindow | null = null;
-let sharedProgressLine: _ZoteroTypes.ItemProgress | null = null;
-let sharedProgressCloseTimer: ReturnType<typeof setTimeout> | null = null;
+let statusBarCloseTimer: ReturnType<typeof setTimeout> | null = null;
 let completedTaskCount = 0;
 let failedTaskCount = 0;
 let lastFailureMessage = "";
@@ -143,21 +145,11 @@ export async function translateSelectedPDF(win: Window): Promise<void> {
 }
 
 function registerTranslationTask(attachment: any, win: Window): void {
-  clearSharedProgressCloseTimer();
-  if (!sharedProgressWindow) {
+  clearStatusBarCloseTimer();
+  if (activeTasks.size === 0) {
     completedTaskCount = 0;
     failedTaskCount = 0;
     lastFailureMessage = "";
-    sharedProgressWindow = new Zotero.ProgressWindow({
-      window: win,
-      closeOnClick: false,
-    });
-    sharedProgressWindow.changeHeadline(config.addonName);
-    sharedProgressLine = new sharedProgressWindow.ItemProgress(
-      "",
-      "正在准备 Zotero BabelDOC 翻译任务，请稍候...",
-    );
-    sharedProgressWindow.show();
   }
 
   const label = String(
@@ -170,7 +162,8 @@ function registerTranslationTask(attachment: any, win: Window): void {
     stage: "等待开始",
     updatedAt: Date.now(),
   });
-  refreshSharedProgressWindow();
+  registerStatusBarIfNeeded(win);
+  refreshTranslationStatusBar();
 }
 
 function updateTranslationTask(attachmentID: number, stage: string): void {
@@ -178,7 +171,7 @@ function updateTranslationTask(attachmentID: number, stage: string): void {
   if (!task) return;
   task.stage = stage;
   task.updatedAt = Date.now();
-  refreshSharedProgressWindow();
+  refreshTranslationStatusBar();
 }
 
 function finishTranslationTask(
@@ -196,60 +189,57 @@ function finishTranslationTask(
   }
 
   if (activeTasks.size > 0) {
-    refreshSharedProgressWindow();
+    refreshTranslationStatusBar();
     return;
   }
 
-  sharedProgressWindow?.changeHeadline(
-    config.addonName,
-    undefined,
-    " · 全部任务已结束",
-  );
-  sharedProgressLine?.setText(
-    failedTaskCount === 0
-      ? `翻译完成：成功 ${completedTaskCount} 个任务`
-      : `任务结束：成功 ${completedTaskCount}，失败 ${failedTaskCount}。${compactProgressError(lastFailureMessage)}`,
-  );
-  sharedProgressCloseTimer = setTimeout(
-    closeSharedProgressWindow,
+  showTranslationStatusBar({
+    state: failedTaskCount === 0 ? "success" : "error",
+    message:
+      failedTaskCount === 0
+        ? `全部翻译完成，共成功 ${completedTaskCount} 个任务`
+        : `任务结束：成功 ${completedTaskCount}，失败 ${failedTaskCount}。${compactProgressError(lastFailureMessage)}`,
+    badge: failedTaskCount === 0 ? "完成" : `${failedTaskCount} 个失败`,
+  });
+  statusBarCloseTimer = setTimeout(
+    closeTranslationStatusBar,
     failedTaskCount > 0 ? 12000 : 5000,
   );
 }
 
-function refreshSharedProgressWindow(): void {
-  if (!sharedProgressWindow || !sharedProgressLine || activeTasks.size === 0) {
-    return;
-  }
+function refreshTranslationStatusBar(): void {
+  if (activeTasks.size === 0) return;
   const latestTask = [...activeTasks.values()].sort(
     (left, right) => right.updatedAt - left.updatedAt,
   )[0];
   const completed = completedTaskCount + failedTaskCount;
-  sharedProgressWindow.changeHeadline(
-    config.addonName,
-    undefined,
-    ` · ${activeTasks.size} 个任务进行中`,
-  );
-  sharedProgressLine.setText(
-    `${truncateProgressLabel(latestTask.label)}：${latestTask.stage}${
+  showTranslationStatusBar({
+    state: "running",
+    message: `${truncateProgressLabel(latestTask.label)}：${latestTask.stage}${
       completed > 0 ? `（本轮已结束 ${completed} 个）` : ""
     }`,
-  );
+    badge: `${activeTasks.size} 个进行中`,
+  });
 }
 
-function closeSharedProgressWindow(): void {
-  sharedProgressWindow?.close();
-  sharedProgressWindow = null;
-  sharedProgressLine = null;
-  sharedProgressCloseTimer = null;
+function closeTranslationStatusBar(): void {
+  hideTranslationStatusBar();
+  statusBarCloseTimer = null;
   completedTaskCount = 0;
   failedTaskCount = 0;
   lastFailureMessage = "";
 }
 
-function clearSharedProgressCloseTimer(): void {
-  if (sharedProgressCloseTimer === null) return;
-  clearTimeout(sharedProgressCloseTimer);
-  sharedProgressCloseTimer = null;
+function registerStatusBarIfNeeded(win: Window): void {
+  const bar = win.document.getElementById("babeldoctranslator-status-bar");
+  if (bar) return;
+  registerTranslationStatusBar(win);
+}
+
+function clearStatusBarCloseTimer(): void {
+  if (statusBarCloseTimer === null) return;
+  clearTimeout(statusBarCloseTimer);
+  statusBarCloseTimer = null;
 }
 
 function truncateProgressLabel(label: string): string {
