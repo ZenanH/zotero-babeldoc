@@ -11,7 +11,7 @@ import {
   writeManagedConfig,
   writeTextAtomically,
 } from "./settings";
-import { detectBabelDoc } from "./babeldoc";
+import { acquireBabelDocRuntime, detectBabelDoc } from "./babeldoc";
 import { runExternalProcess } from "./process";
 import { getSelectedPdfAttachment } from "./menu";
 import {
@@ -56,6 +56,7 @@ export async function translateSelectedPDF(win: Window): Promise<void> {
   }
 
   let taskDirectory = "";
+  let releaseBabelDocRuntime: (() => void) | null = null;
   activeAttachments.add(attachment.id);
   registerTranslationTask(attachment, win);
   try {
@@ -68,6 +69,7 @@ export async function translateSelectedPDF(win: Window): Promise<void> {
 
     updateTranslationTask(attachment.id, "检测 BabelDOC");
     const babeldoc = await detectBabelDoc();
+    releaseBabelDocRuntime = acquireBabelDocRuntime(babeldoc.runtimePath);
     taskDirectory = await createTaskDirectory();
     const outputDirectory = joinPath(taskDirectory, "output");
     const workingDirectory = joinPath(taskDirectory, "working");
@@ -140,6 +142,7 @@ export async function translateSelectedPDF(win: Window): Promise<void> {
     finishTranslationTask(attachment.id, false, message);
   } finally {
     activeAttachments.delete(attachment.id);
+    releaseBabelDocRuntime?.();
     if (taskDirectory) await removeDirectory(taskDirectory);
   }
 }

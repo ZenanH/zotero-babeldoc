@@ -8,7 +8,7 @@ import {
   validateSettings,
   writeManagedConfig,
 } from "./settings";
-import { detectBabelDoc } from "./babeldoc";
+import { deployBabelDoc, detectBabelDoc } from "./babeldoc";
 
 export async function registerPrefsScripts(win: Window): Promise<void> {
   const document = win.document;
@@ -70,6 +70,12 @@ export async function registerPrefsScripts(win: Window): Promise<void> {
   const testButton = document.getElementById(
     "babeldoctranslator-test",
   ) as HTMLButtonElement;
+  const deployButton = document.getElementById(
+    "babeldoctranslator-deploy",
+  ) as HTMLButtonElement;
+  const detectButton = document.getElementById(
+    "babeldoctranslator-detect",
+  ) as HTMLButtonElement;
   if (saveButton.dataset.bound === "true") return;
   saveButton.dataset.bound = "true";
 
@@ -100,20 +106,59 @@ export async function registerPrefsScripts(win: Window): Promise<void> {
     }
   });
 
-  try {
-    const installation = await detectBabelDoc();
+  deployButton.addEventListener("command", async () => {
+    deployButton.disabled = true;
+    detectButton.disabled = true;
     setStatus(
       babeldocStatus,
-      `已检测到 BabelDOC ${installation.version}：${installation.path}`,
-      "success",
+      "正在部署固定版本的 uv、Python 和 BabelDOC…",
+      "neutral",
     );
-  } catch (error) {
-    setStatus(
-      babeldocStatus,
-      error instanceof Error ? error.message : String(error),
-      "error",
-    );
-  }
+    try {
+      const installation = await deployBabelDoc();
+      setStatus(
+        babeldocStatus,
+        `已部署 BabelDOC ${installation.version}：${installation.path}`,
+        "success",
+      );
+    } catch (error) {
+      setStatus(
+        babeldocStatus,
+        error instanceof Error ? error.message : String(error),
+        "error",
+      );
+    } finally {
+      deployButton.disabled = false;
+      detectButton.disabled = false;
+    }
+  });
+
+  detectButton.addEventListener("command", async () => {
+    detectButton.disabled = true;
+    setStatus(babeldocStatus, "正在检测固定版本 BabelDOC…", "neutral");
+    try {
+      const installation = await detectBabelDoc();
+      setStatus(
+        babeldocStatus,
+        `已检测到 BabelDOC ${installation.version}：${installation.path}`,
+        "success",
+      );
+    } catch (error) {
+      setStatus(
+        babeldocStatus,
+        error instanceof Error ? error.message : String(error),
+        "error",
+      );
+    } finally {
+      detectButton.disabled = false;
+    }
+  });
+
+  setStatus(
+    babeldocStatus,
+    "尚未检测 BabelDOC。请先点击“检测 BabelDOC”，未部署时再点击“部署 / 修复 BabelDOC”。",
+    "neutral",
+  );
 }
 
 function readForm(document: Document): TranslatorSettings {

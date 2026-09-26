@@ -7,7 +7,7 @@ export interface ProcessResult {
 export async function runExternalProcess(
   command: string,
   args: string[],
-  options: { workdir?: string } = {},
+  options: { workdir?: string; environment?: Record<string, string> } = {},
 ): Promise<ProcessResult> {
   const { Subprocess } = ChromeUtils.importESModule(
     "resource://gre/modules/Subprocess.sys.mjs",
@@ -16,6 +16,8 @@ export async function runExternalProcess(
     command,
     arguments: args,
     workdir: options.workdir,
+    environment: options.environment,
+    environmentAppend: Boolean(options.environment),
     stdout: "pipe",
     stderr: "pipe",
   });

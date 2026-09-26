@@ -1,7 +1,7 @@
 {
   "name": "zotero-babeldoc",
   "type": "module",
-  "version": "0.1.11",
+  "version": "0.1.12",
   "description": "Translate Zotero PDF attachments with an isolated BabelDOC installation.",
   "repository": {
     "type": "git",
@@ -9,6 +9,9 @@
   },
   "config": {
     "babeldocVersion": "0.6.4",
+    "uvVersion": "0.12.13",
+    "pythonVersion": "3.12.13",
+    "runtimeId": "babeldoc-0.6.4-python-3.12.13-lock-v1",
     "addonName": "Zotero BabelDOC",
     "addonID": "babeldoc-translator@zhuo.local",
     "addonRef": "babeldoctranslator",
@@ -18,8 +21,9 @@
   "license": "AGPL-3.0-or-later",
   "scripts": {
     "start": "zotero-plugin serve",
-    "build": "NODE_ENV=production zotero-plugin build && tsc --noEmit",
-    "build:dev": "NODE_ENV=development zotero-plugin build && tsc --noEmit",
+    "python-lock:embed": "node scripts/embed-python-lock.mjs",
+    "build": "pnpm run python-lock:embed && NODE_ENV=production zotero-plugin build && tsc --noEmit",
+    "build:dev": "pnpm run python-lock:embed && NODE_ENV=development zotero-plugin build && tsc --noEmit",
     "lint:check": "prettier --check . && eslint .",
     "lint:fix": "prettier --write . && eslint . --fix",
     "release": "zotero-plugin release",

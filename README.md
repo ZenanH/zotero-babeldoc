@@ -10,48 +10,54 @@ Zotero 10 插件：从 Zotero 中直接调用本机的 BabelDOC 翻译 PDF，并
 - 在 Zotero 主窗口底部使用固定状态栏显示阶段和活动任务数，不伪造百分比进度；新增任务会更新同一状态栏，全部任务结束后自动收起。
 - 支持仅中文翻译 PDF，或原文 + 中文左右分页 PDF。
 - API Base URL、API Key、模型和翻译参数保存在 Zotero 插件设置中。
-- BabelDOC 使用独立的 uv 虚拟环境，不会修改用户已有的 BabelDOC。
+- BabelDOC 使用插件专用的 uv / Python 虚拟环境，不会修改用户已有的 BabelDOC。
 - 翻译结果自动添加到原文献下。
 
-## 安装 uv 和 BabelDOC
+## 部署 BabelDOC
 
-请在 Zotero 外完成以下两步。第一步安装 [uv](https://docs.astral.sh/uv/)，第二步创建插件专用环境并安装固定版本的 BabelDOC。插件当前固定使用 `BabelDOC==0.6.4`。
+插件不会在启动时自动联网安装运行时。打开 Zotero BabelDOC 设置页，点击“部署 / 修复 BabelDOC”。插件会先检测固定版本的 uv；如果系统中没有合适版本，就把它安装到插件专用目录，然后用 uv 管理固定版本的 Python、BabelDOC 和依赖。
 
-macOS/Linux：
+运行时目录为：
 
-```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
-export PATH="$HOME/.local/bin:$PATH"
-uv venv --no-project --allow-existing --python 3.12 "$HOME/.babeldoc-translator/venv"
-uv pip install --python "$HOME/.babeldoc-translator/venv/bin/python" --upgrade "BabelDOC==0.6.4"
+```text
+~/.babeldoc-translator/
+├── uv/0.12.13/                  # 插件专用 uv
+├── runtimes/runtime-<runtime-id>-<deployment>/venv/ # 已验证的 Python 环境
+└── active-runtime.json          # 已验证并正在使用的运行时
 ```
 
-Windows PowerShell：
+部署过程先在新目录完成安装和 `babeldoc --version` 校验，成功后才切换 `active-runtime.json`，再清理未使用的旧环境。翻译任务正在使用旧环境时，旧环境会等任务结束后再清理。
 
-```powershell
-powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
-$env:Path = "$HOME\.local\bin;$env:Path"
-$BabelDocVenv = Join-Path $HOME ".babeldoc-translator\venv"
-$BabelDocPython = Join-Path $BabelDocVenv "Scripts\python.exe"
-uv venv --no-project --allow-existing --python 3.12 $BabelDocVenv
-uv pip install --python $BabelDocPython --upgrade "BabelDOC==0.6.4"
-```
+## 固定版本与依赖
 
-安装插件后，也可以直接复制 Zotero 设置页显示的对应命令。插件只检测这个独立环境中的 BabelDOC；用户之后升级自己的全局 BabelDOC，不会影响 Zotero 翻译环境。
+当前插件 `0.1.12` 的运行时约束如下：
+
+| 组件                       | 固定版本                                                 |
+| -------------------------- | -------------------------------------------------------- |
+| uv                         | `0.12.13`                                                |
+| Python                     | `3.12.13`                                                |
+| BabelDOC                   | `0.6.4`                                                  |
+| 依赖锁文件                 | [`runtime/uv.lock`](runtime/uv.lock)                     |
+| 部署清单（版本 + SHA-256） | [`runtime/requirements.lock`](runtime/requirements.lock) |
+
+锁文件包含 BabelDOC 的完整传递依赖、平台标记和包哈希；插件构建时会把部署清单嵌入 XPI，因此用户不需要手工复制 Python 配置文件。当前锁定的主要依赖包括：
+
+直接依赖为 `BabelDOC==0.6.4`；锁定的主要传递依赖包括：`numpy==2.5.3`、`scipy==1.18.1`、`scikit-image==0.26.0`、`scikit-learn==1.9.1`、`onnx==1.23.0`、`onnxruntime==1.30.0`、`opencv-python-headless==5.0.0.93`、`PyMuPDF==1.28.2`、`pydantic==2.13.5`、`openai==3.19.2`、`httpx==0.28.1`、`huggingface-hub==2.0.0`、`tiktoken==0.14.0`、`cryptography==50.0.1`、`freetype-py==2.5.1`、`uharfbuzz==0.56.2`、`xsdata==26.2`。完整依赖的版本、平台标记和 SHA-256 哈希以 `runtime/requirements.lock` 为准。
+
+用户自己的 uv、Python 或 BabelDOC 不会被插件复用或升级。插件只有在发布了声明新运行时的新版插件后，才会要求重新部署。
 
 ## BabelDOC 版本升级
 
-插件会严格检查插件要求的 BabelDOC 版本。如果未来插件支持新版本，发布说明和设置页中的安装命令会显示新的固定版本。旧用户只需在 Zotero 外重新运行该命令：它会复用 `~/.babeldoc-translator/venv`，并在其中升级到新的精确版本，不会影响用户自己的全局 BabelDOC，也不需要删除旧环境。
-
-插件不会自动联网升级 BabelDOC。这样可以避免翻译任务在用户不知情时改变依赖；用户确认升级命令后，再安装新版本插件即可。
+插件会严格检查运行时 ID、uv、Python 和 BabelDOC 版本。如果未来插件支持新版本，设置页的检测按钮会提示运行时不匹配；用户点击“部署 / 修复 BabelDOC”后，插件会部署新环境，验证成功后再清理旧环境。
 
 ## 配置与使用
 
 1. 从 [Releases](https://github.com/ZenanH/zotero-babeldoc/releases/latest) 下载并安装 XPI。
-2. 打开 Zotero 插件设置，填写 OpenAI-compatible API 的 Base URL、API Key 和模型。
-3. 点击“测试 Base URL / Key”，确认连接正常后保存配置。
-4. 在文献下选中一个本地 PDF 附件，右键选择“使用 BabelDOC 翻译 PDF”。
-5. 在设置页选择输出类型：
+2. 打开 Zotero 插件设置，点击“部署 / 修复 BabelDOC”，等待部署完成。
+3. 填写 OpenAI-compatible API 的 Base URL、API Key 和模型。
+4. 点击“测试服务器连接”，确认服务器可达后保存配置。此轻量测试不验证 API Key 或模型，也不会发起计费的模型请求。
+5. 在文献下选中一个本地 PDF 附件，右键选择“使用 BabelDOC 翻译 PDF”。
+6. 在设置页选择输出类型：
    - **仅中文翻译 PDF**：只导入单语翻译结果，默认选项。
    - **原文 + 中文（左右分页）**：导入 BabelDOC 的双语结果。
 
@@ -59,7 +65,7 @@ uv pip install --python $BabelDocPython --upgrade "BabelDOC==0.6.4"
 
 ## 兼容性
 
-当前版本只适配 Zotero 10，并固定 BabelDOC 版本为 `0.6.4`。仓库中的每个版本标签都会由 GitHub Actions 自动构建并发布 XPI。升级插件后请在 Zotero 的插件管理器中确认版本号已更新；旧版偏好页不会自动显示新版安装命令或图标。
+当前版本只适配 Zotero 10，并固定 uv `0.12.13`、Python `3.12.13`、BabelDOC `0.6.4`。GitHub Actions 会构建 XPI，并在 Ubuntu、macOS Apple Silicon 和 Windows 上验证运行时锁文件。仓库中的每个版本标签都会自动发布 XPI。
 
 ## 上游版本提醒
 

@@ -1,6 +1,9 @@
 import { config } from "../../package.json";
 
 export const REQUIRED_BABELDOC_VERSION = config.babeldocVersion;
+export const REQUIRED_UV_VERSION = config.uvVersion;
+export const REQUIRED_PYTHON_VERSION = config.pythonVersion;
+export const RUNTIME_ID = config.runtimeId;
 
 export type TranslationOutputMode = "mono" | "dual";
 
@@ -92,60 +95,54 @@ export function saveSettings(settings: TranslatorSettings): void {
   setPref("translation-output-mode", settings.translationOutputMode);
 }
 
-export function getManagedBabelDocVenvPath(): string {
-  return joinPath(getHomeDirectory(), ".babeldoc-translator", "venv");
+export function getManagedRuntimeRoot(): string {
+  return joinPath(getHomeDirectory(), ".babeldoc-translator");
 }
 
-export function getManagedBabelDocPythonPath(): string {
+export function getManagedUvDirectory(): string {
+  return joinPath(getManagedRuntimeRoot(), "uv", REQUIRED_UV_VERSION);
+}
+
+export function getManagedPythonDirectory(): string {
+  return joinPath(getManagedRuntimeRoot(), "python");
+}
+
+export function getManagedUvPath(): string {
+  const executable = Services.appinfo.OS === "WINNT" ? "uv.exe" : "uv";
+  return joinPath(getManagedUvDirectory(), executable);
+}
+
+export function getManagedRuntimesDirectory(): string {
+  return joinPath(getManagedRuntimeRoot(), "runtimes");
+}
+
+export function getManagedRuntimeManifestPath(): string {
+  return joinPath(getManagedRuntimeRoot(), "active-runtime.json");
+}
+
+export function getManagedBabelDocPythonPath(venvPath: string): string {
   const executableDirectory =
     Services.appinfo.OS === "WINNT" ? "Scripts" : "bin";
   const executable = Services.appinfo.OS === "WINNT" ? "python.exe" : "python";
-  return joinPath(
-    getManagedBabelDocVenvPath(),
-    executableDirectory,
-    executable,
-  );
+  return joinPath(venvPath, executableDirectory, executable);
 }
 
 export function getManagedBabelDocInstallCommand(): string {
   return Services.appinfo.OS === "WINNT"
-    ? getWindowsBabelDocInstallCommand()
-    : getUnixBabelDocInstallCommand();
+    ? "请在 Zotero 设置页点击“部署 / 修复 BabelDOC”。"
+    : "请在 Zotero 设置页点击“部署 / 修复 BabelDOC”。";
 }
 
 export function getUnixBabelDocInstallCommand(): string {
-  return [
-    "curl -LsSf https://astral.sh/uv/install.sh | sh",
-    'export PATH="$HOME/.local/bin:$PATH"',
-    'uv venv --no-project --allow-existing --python 3.12 "$HOME/.babeldoc-translator/venv"',
-    `uv pip install --python "$HOME/.babeldoc-translator/venv/bin/python" --upgrade "BabelDOC==${REQUIRED_BABELDOC_VERSION}"`,
-  ].join("\n");
+  return `点击上方按钮后，插件会自动配置 uv ${REQUIRED_UV_VERSION}，并安装 BabelDOC ${REQUIRED_BABELDOC_VERSION}。`;
 }
 
 export function getWindowsBabelDocInstallCommand(): string {
-  return [
-    'powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"',
-    '$env:Path = "$HOME\\.local\\bin;$env:Path"',
-    '$BabelDocVenv = Join-Path $HOME ".babeldoc-translator\\venv"',
-    '$BabelDocPython = Join-Path $BabelDocVenv "Scripts\\python.exe"',
-    "uv venv --no-project --allow-existing --python 3.12 $BabelDocVenv",
-    `uv pip install --python $BabelDocPython --upgrade "BabelDOC==${REQUIRED_BABELDOC_VERSION}"`,
-  ].join("\n");
+  return `点击上方按钮后，插件会自动配置 uv ${REQUIRED_UV_VERSION}，并安装 BabelDOC ${REQUIRED_BABELDOC_VERSION}。`;
 }
 
 export function validateSettings(settings: TranslatorSettings): void {
-  if (!settings.baseUrl) {
-    throw new Error("请填写 Base URL。");
-  }
-  let url: URL;
-  try {
-    url = new URL(settings.baseUrl);
-  } catch {
-    throw new Error("Base URL 不是有效的 URL。");
-  }
-  if (url.protocol !== "http:" && url.protocol !== "https:") {
-    throw new Error("Base URL 只支持 http 或 https。");
-  }
+  validateBaseUrl(settings.baseUrl);
   if (!settings.apiKey) {
     throw new Error("请填写 API Key。");
   }
@@ -154,6 +151,21 @@ export function validateSettings(settings: TranslatorSettings): void {
   }
   if (!settings.sourceLanguage || !settings.targetLanguage) {
     throw new Error("源语言和目标语言不能为空。");
+  }
+}
+
+export function validateBaseUrl(baseUrl: string): void {
+  if (!baseUrl) {
+    throw new Error("请填写 Base URL。");
+  }
+  let url: URL;
+  try {
+    url = new URL(baseUrl);
+  } catch {
+    throw new Error("Base URL 不是有效的 URL。");
+  }
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    throw new Error("Base URL 只支持 http 或 https。");
   }
 }
 
