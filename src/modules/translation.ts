@@ -264,10 +264,7 @@ function compactProgressError(message: string): string {
   return compact.length > 120 ? `${compact.slice(0, 117)}...` : compact;
 }
 
-function getTaskKey(
-  attachmentID: number,
-  kind: TranslationTaskKind,
-): string {
+function getTaskKey(attachmentID: number, kind: TranslationTaskKind): string {
   return `${kind}:${attachmentID}`;
 }
 
