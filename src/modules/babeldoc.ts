@@ -26,7 +26,6 @@ export interface BabelDocInstallation {
   path: string;
   version: string;
   runtimePath: string;
-  uvPath: string;
 }
 
 interface RuntimeManifest {
@@ -59,7 +58,6 @@ export async function detectBabelDoc(): Promise<BabelDocInstallation> {
     );
   }
 
-  const uvPath = await findWorkingUv();
   const executablePath = getBabelDocExecutablePath(manifest.environmentPath);
   if (!(await pathExists(executablePath))) {
     throw new Error(
@@ -79,7 +77,6 @@ export async function detectBabelDoc(): Promise<BabelDocInstallation> {
     path: executablePath,
     version,
     runtimePath: manifest.environmentPath,
-    uvPath,
   };
 }
 
@@ -178,7 +175,6 @@ async function deployBabelDocInternal(): Promise<BabelDocInstallation> {
       path: getBabelDocExecutablePath(environmentPath),
       version,
       runtimePath: environmentPath,
-      uvPath,
     };
   } catch (error) {
     await removeDirectory(runtimeDirectory);
@@ -267,16 +263,6 @@ async function getUvCandidates(): Promise<string[]> {
     // The explicit well-known paths above are enough when shell lookup is unavailable.
   }
   return [...new Set(candidates)];
-}
-
-async function findWorkingUv(): Promise<string> {
-  const candidates = [getManagedUvPath(), ...(await getUvCandidates())];
-  for (const candidate of [...new Set(candidates)]) {
-    if (await hasRequiredUvVersion(candidate)) return candidate;
-  }
-  throw new Error(
-    `未找到固定版本 uv ${REQUIRED_UV_VERSION}。请点击“部署 / 修复 BabelDOC”重新配置。`,
-  );
 }
 
 async function hasRequiredUvVersion(path: string): Promise<boolean> {

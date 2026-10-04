@@ -28,21 +28,21 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v10.2.0
         with:
-          version: "0.12.13"
+          version: "0.12.23"
 
       - name: Verify lockfile
         run: uv lock --directory runtime --check
 
       - name: Install pinned Python
-        run: uv python install 3.12.13
+        run: uv python install 3.12.15
 
       - name: Create isolated environment
-        run: uv venv --python 3.12.13 .venv
+        run: uv venv --python 3.12.15 .venv
 
       - name: Install hash-locked dependencies on Unix
         if: runner.os != 'Windows'

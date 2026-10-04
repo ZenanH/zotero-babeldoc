@@ -9,9 +9,9 @@
   },
   "config": {
     "babeldocVersion": "0.6.4",
-    "uvVersion": "0.12.13",
-    "pythonVersion": "3.12.13",
-    "runtimeId": "babeldoc-0.6.4-python-3.12.13-lock-v1",
+    "uvVersion": "0.12.23",
+    "pythonVersion": "3.12.15",
+    "runtimeId": "babeldoc-0.6.4-python-3.12.15-uv-0.12.23-lock-v2",
     "addonName": "Zotero BabelDOC",
     "addonID": "babeldoc-translator@zhuo.local",
     "addonRef": "babeldoctranslator",

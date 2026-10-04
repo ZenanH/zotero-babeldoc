@@ -76,7 +76,10 @@ export async function registerPrefsScripts(win: Window): Promise<void> {
   const detectButton = document.getElementById(
     "babeldoctranslator-detect",
   ) as HTMLButtonElement;
-  if (saveButton.dataset.bound === "true") return;
+  if (saveButton.dataset.bound === "true") {
+    void refreshBabelDocStatus(babeldocStatus);
+    return;
+  }
   saveButton.dataset.bound = "true";
 
   saveButton.addEventListener("command", async () => {
@@ -135,30 +138,34 @@ export async function registerPrefsScripts(win: Window): Promise<void> {
 
   detectButton.addEventListener("command", async () => {
     detectButton.disabled = true;
-    setStatus(babeldocStatus, "正在检测固定版本 BabelDOC…", "neutral");
     try {
-      const installation = await detectBabelDoc();
-      setStatus(
-        babeldocStatus,
-        `已检测到 BabelDOC ${installation.version}：${installation.path}`,
-        "success",
-      );
-    } catch (error) {
-      setStatus(
-        babeldocStatus,
-        error instanceof Error ? error.message : String(error),
-        "error",
-      );
+      await refreshBabelDocStatus(babeldocStatus);
     } finally {
       detectButton.disabled = false;
     }
   });
 
-  setStatus(
-    babeldocStatus,
-    "尚未检测 BabelDOC。请先点击“检测 BabelDOC”，未部署时再点击“部署 / 修复 BabelDOC”。",
-    "neutral",
-  );
+  void refreshBabelDocStatus(babeldocStatus);
+}
+
+async function refreshBabelDocStatus(
+  status: HTMLElement | null,
+): Promise<void> {
+  setStatus(status, "正在检测插件专用 BabelDOC…", "neutral");
+  try {
+    const installation = await detectBabelDoc();
+    setStatus(
+      status,
+      `已检测到 BabelDOC ${installation.version}：${installation.path}`,
+      "success",
+    );
+  } catch (error) {
+    setStatus(
+      status,
+      error instanceof Error ? error.message : String(error),
+      "error",
+    );
+  }
 }
 
 function readForm(document: Document): TranslatorSettings {

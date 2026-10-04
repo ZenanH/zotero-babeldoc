@@ -15,10 +15,10 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Check Zotero and BabelDOC versions
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const supportedZoteroMajor = 10;
@@ -27,14 +27,22 @@ jobs:
             const owner = context.repo.owner;
             const repo = context.repo.repo;
 
-            const zotero = await github.request(
-              "GET /repos/zotero/zotero/releases/latest",
-            );
-            const zoteroTag = String(zotero.data.tag_name || "");
-            const zoteroMatch = zoteroTag.match(/(\d+)(?:\.\d+)?/);
-            const latestZoteroMajor = zoteroMatch
-              ? Number(zoteroMatch[1])
+            const branchResponse = await github.rest.repos.listBranches({
+              owner: "zotero",
+              repo: "zotero",
+              per_page: 100,
+            });
+            const zoteroBranches = branchResponse.data
+              .map((branch) => String(branch.name || ""))
+              .map((name) => name.match(/^(\d+)(?:\.0)?$/))
+              .filter(Boolean)
+              .map((match) => Number(match[1]));
+            const latestZoteroMajor = zoteroBranches.length
+              ? Math.max(...zoteroBranches)
               : null;
+            const zoteroTag = latestZoteroMajor === null
+              ? ""
+              : `${latestZoteroMajor}.0`;
 
             const babeldocResponse = await fetch(
               "https://pypi.org/pypi/BabelDOC/json",
@@ -101,7 +109,7 @@ jobs:
               "",
               ...findings,
               "",
-              `- Zotero 最新发行版：${zotero.data.html_url}`,
+              `- Zotero 主版本分支：https://github.com/zotero/zotero/tree/${zoteroTag}`,
               "- BabelDOC：https://pypi.org/project/BabelDOC/",
               "",
               "请检查兼容性、更新插件约束和测试矩阵；确认后关闭此 Issue。",
