@@ -2,7 +2,7 @@ pref("base-url", "https://api.openai.com/v1");
 pref("api-key", "");
 pref("model", "gpt-4o-mini");
 pref("source-language", "en");
-pref("target-language", "zh-CN");
+pref("target-language", "zh");
 pref("qps", 10);
 pref("pool-max-workers", 8);
 pref("watermark-output-mode", "no_watermark");

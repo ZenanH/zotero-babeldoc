@@ -58,6 +58,8 @@ export async function translateSelectedPDF(win: Window): Promise<void> {
 
   let taskDirectory = "";
   let releaseBabelDocRuntime: (() => void) | null = null;
+  const sourceLanguage = settings.sourceLanguage;
+  const targetLanguage = settings.targetLanguage;
   activeAttachments.add(attachment.id);
   registerTranslationTask(attachment, win);
   try {
@@ -80,7 +82,10 @@ export async function translateSelectedPDF(win: Window): Promise<void> {
     await writeManagedConfig(settings);
     await writeTextAtomically(taskConfigPath, renderBabelDocToml(settings));
 
-    updateTranslationTask(attachment.id, `BabelDOC ${babeldoc.version} 翻译中`);
+    updateTranslationTask(
+      attachment.id,
+      `BabelDOC ${babeldoc.version}（${sourceLanguage} → ${targetLanguage}）翻译中`,
+    );
     const result = await runExternalProcess(
       babeldoc.path,
       [
@@ -92,6 +97,17 @@ export async function translateSelectedPDF(win: Window): Promise<void> {
         outputDirectory,
         "--working-dir",
         workingDirectory,
+        "--lang-in",
+        sourceLanguage,
+        "--lang-out",
+        targetLanguage,
+        "--qps",
+        String(settings.qps),
+        "--pool-max-workers",
+        String(settings.poolMaxWorkers),
+        "--watermark-output-mode",
+        settings.watermarkOutputMode,
+        settings.translationOutputMode === "mono" ? "--no-dual" : "--no-mono",
       ],
       { workdir: taskDirectory },
     );
@@ -111,14 +127,14 @@ export async function translateSelectedPDF(win: Window): Promise<void> {
     const outputPath = await findTranslatedPDF(
       outputDirectory,
       getFileStem(inputPath),
-      settings.targetLanguage,
+      targetLanguage,
       settings.translationOutputMode,
     );
     if (!outputPath) {
       throw new Error(
         settings.translationOutputMode === "dual"
-          ? "BabelDOC 已结束，但没有找到原文+译文 PDF。"
-          : "BabelDOC 已结束，但没有找到中文翻译 PDF。",
+          ? `BabelDOC 已结束，但没有找到目标语言 ${targetLanguage} 的原文+译文 PDF。`
+          : `BabelDOC 已结束，但没有找到目标语言 ${targetLanguage} 的翻译 PDF。`,
       );
     }
 
@@ -128,7 +144,7 @@ export async function translateSelectedPDF(win: Window): Promise<void> {
     const imported = await Zotero.Attachments.importFromFile({
       file: outputPath,
       parentItemID: parentID,
-      title: `${parentTitle} [BabelDOC ${settings.targetLanguage}]`,
+      title: `${parentTitle} [BabelDOC ${targetLanguage}]`,
     });
 
     try {
@@ -299,11 +315,17 @@ async function findTranslatedPDF(
 
   try {
     const children = await getIOUtils().getChildren(outputDirectory);
-    const matches = (children as string[])
-      .filter((path) => new RegExp(`\\.${suffix}\\.pdf$`, "i").test(path))
-      .sort()
-      .reverse();
-    return matches[0] || null;
+    const outputFiles = (children as string[]).filter((path) =>
+      new RegExp(`\\.${suffix}\\.pdf$`, "i").test(path),
+    );
+    const languageToken = `.${targetLanguage.toLowerCase()}.${suffix}.pdf`;
+    const languageMatches = outputFiles.filter((path) =>
+      path.toLowerCase().endsWith(languageToken),
+    );
+    if (languageMatches.length > 0) {
+      return languageMatches.sort().reverse()[0];
+    }
+    return outputFiles.length === 1 ? outputFiles[0] : null;
   } catch {
     return null;
   }

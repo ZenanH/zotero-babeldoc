@@ -8,6 +8,17 @@ export const RUNTIME_ID = config.runtimeId;
 
 export type TranslationOutputMode = "mono" | "dual";
 
+const CHINESE_LANGUAGE_ALIASES = new Set([
+  "zh",
+  "zh-cn",
+  "zh-hans",
+  "zhs",
+  "chinese",
+  "simplified chinese",
+  "中文",
+  "简体中文",
+]);
+
 export interface TranslatorSettings {
   baseUrl: string;
   apiKey: string;
@@ -25,7 +36,7 @@ export const DEFAULT_SETTINGS: TranslatorSettings = {
   apiKey: "",
   model: "gpt-4o-mini",
   sourceLanguage: "en",
-  targetLanguage: "zh-CN",
+  targetLanguage: "zh",
   qps: 10,
   poolMaxWorkers: 8,
   watermarkOutputMode: "no_watermark",
@@ -62,14 +73,12 @@ export function getSettings(): TranslatorSettings {
     baseUrl: getPref("base-url", DEFAULT_SETTINGS.baseUrl).trim(),
     apiKey: getPref("api-key", DEFAULT_SETTINGS.apiKey).trim(),
     model: getPref("model", DEFAULT_SETTINGS.model).trim(),
-    sourceLanguage: getPref(
-      "source-language",
-      DEFAULT_SETTINGS.sourceLanguage,
-    ).trim(),
-    targetLanguage: getPref(
-      "target-language",
-      DEFAULT_SETTINGS.targetLanguage,
-    ).trim(),
+    sourceLanguage: normalizeBabelDocLanguage(
+      getPref("source-language", DEFAULT_SETTINGS.sourceLanguage),
+    ),
+    targetLanguage: normalizeBabelDocLanguage(
+      getPref("target-language", DEFAULT_SETTINGS.targetLanguage),
+    ),
     qps: clampInteger(getPref("qps", DEFAULT_SETTINGS.qps), 1, 64),
     poolMaxWorkers: clampInteger(
       getPref("pool-max-workers", DEFAULT_SETTINGS.poolMaxWorkers),
@@ -88,8 +97,14 @@ export function saveSettings(settings: TranslatorSettings): void {
   setPref("base-url", settings.baseUrl.trim());
   setPref("api-key", settings.apiKey.trim());
   setPref("model", settings.model.trim());
-  setPref("source-language", settings.sourceLanguage.trim());
-  setPref("target-language", settings.targetLanguage.trim());
+  setPref(
+    "source-language",
+    normalizeBabelDocLanguage(settings.sourceLanguage),
+  );
+  setPref(
+    "target-language",
+    normalizeBabelDocLanguage(settings.targetLanguage),
+  );
   setPref("qps", clampInteger(settings.qps, 1, 64));
   setPref("pool-max-workers", clampInteger(settings.poolMaxWorkers, 1, 64));
   setPref("watermark-output-mode", settings.watermarkOutputMode);
@@ -219,12 +234,20 @@ export function tomlString(value: string): string {
   return JSON.stringify(value);
 }
 
+export function normalizeBabelDocLanguage(value: string): string {
+  const trimmed = String(value || "").trim();
+  const normalized = trimmed.toLowerCase().replaceAll("_", "-");
+  return CHINESE_LANGUAGE_ALIASES.has(normalized) ? "zh" : trimmed;
+}
+
 export function renderBabelDocToml(settings: TranslatorSettings): string {
+  const sourceLanguage = normalizeBabelDocLanguage(settings.sourceLanguage);
+  const targetLanguage = normalizeBabelDocLanguage(settings.targetLanguage);
   return [
     "[babeldoc]",
     "debug = false",
-    `lang-in = ${tomlString(settings.sourceLanguage)}`,
-    `lang-out = ${tomlString(settings.targetLanguage)}`,
+    `lang-in = ${tomlString(sourceLanguage)}`,
+    `lang-out = ${tomlString(targetLanguage)}`,
     `qps = ${clampInteger(settings.qps, 1, 64)}`,
     `watermark-output-mode = ${tomlString(settings.watermarkOutputMode)}`,
     "openai = true",

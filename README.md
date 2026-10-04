@@ -67,6 +67,8 @@ Zotero 10 插件：从 Zotero 中直接调用本机的 BabelDOC 翻译 PDF，并
 
 插件会在 Zotero 数据目录的 `babeldoc-translator/babeldoc.toml` 中维护 TOML，并在每个翻译任务中使用配置副本。输出模式会自动转换为 BabelDOC 的 `no-dual` 和 `no-mono` 选项，不需要手工编辑 TOML。
 
+目标语言支持 BabelDOC 语言代码；中文可填写 `zh`、`zh-CN` 或“中文”，插件会统一按 `zh` 传给 BabelDOC。
+
 ## 兼容性
 
 当前版本只适配 Zotero 10，并固定 uv `0.12.23`、Python `3.12.15`、BabelDOC `0.6.4`。GitHub Actions 会构建 XPI，并在 Ubuntu、macOS Apple Silicon 和 Windows 上验证运行时锁文件。仓库中的每个版本标签都会自动发布 XPI。
