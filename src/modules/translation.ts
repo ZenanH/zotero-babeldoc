@@ -147,7 +147,7 @@ export async function translateSelectedPDF(win: Window): Promise<void> {
   }
 }
 
-function registerTranslationTask(attachment: any, win: Window): void {
+export function registerTranslationTask(attachment: any, win: Window): void {
   clearStatusBarCloseTimer();
   if (activeTasks.size === 0) {
     completedTaskCount = 0;
@@ -169,7 +169,10 @@ function registerTranslationTask(attachment: any, win: Window): void {
   refreshTranslationStatusBar();
 }
 
-function updateTranslationTask(attachmentID: number, stage: string): void {
+export function updateTranslationTask(
+  attachmentID: number,
+  stage: string,
+): void {
   const task = activeTasks.get(attachmentID);
   if (!task) return;
   task.stage = stage;
@@ -177,7 +180,7 @@ function updateTranslationTask(attachmentID: number, stage: string): void {
   refreshTranslationStatusBar();
 }
 
-function finishTranslationTask(
+export function finishTranslationTask(
   attachmentID: number,
   success: boolean,
   errorMessage = "",
@@ -200,7 +203,7 @@ function finishTranslationTask(
     state: failedTaskCount === 0 ? "success" : "error",
     message:
       failedTaskCount === 0
-        ? `全部翻译完成，共成功 ${completedTaskCount} 个任务`
+        ? `全部任务完成，共成功 ${completedTaskCount} 个任务`
         : `任务结束：成功 ${completedTaskCount}，失败 ${failedTaskCount}。${compactProgressError(lastFailureMessage)}`,
     badge: failedTaskCount === 0 ? "完成" : `${failedTaskCount} 个失败`,
   });

@@ -11,10 +11,10 @@ Zotero 10 插件：从 Zotero 中直接调用本机的 BabelDOC 翻译 PDF，并
 - 在 Zotero 主窗口底部使用固定状态栏显示阶段和活动任务数，不伪造百分比进度；新增任务会更新同一状态栏，全部任务结束后自动收起。
 - 支持仅中文翻译 PDF，或原文 + 中文左右分页 PDF。
 - API Base URL、API Key、模型和翻译参数保存在 Zotero 插件设置中。
-- BabelDOC 使用插件专用的 uv / Python 虚拟环境，不会修改用户已有的 BabelDOC。
+- BabelDOC 和 MarkItDown 使用插件专用的 uv / Python 虚拟环境，不会修改用户已有的 BabelDOC。
 - 翻译结果自动添加到原文献下。
 
-总结时由 Zotero 在本机提取 PDF 正文，只把提取出的文字发送到设置的 OpenAI-compatible 模型 API，不上传 PDF 文件。短文一次请求；长文分段总结后再合并，并限制正文长度以控制 API 用量。模型 API 会按服务商规则计费。文字提取通常比发送 PDF 图片或使用视觉模型更省 token，也适用于更多兼容接口；图中的信息只能通过正文或图注总结，扫描版 PDF 需要先 OCR。
+总结时由插件运行时内置的 Microsoft MarkItDown 在本机把 PDF 转为临时 Markdown，只把 Markdown 发送到设置的 OpenAI-compatible 模型 API。PDF、Markdown 临时文件和中间产物不会上传，总结完成或失败后都会清理。短文一次请求；长文分段总结后再合并，并限制正文长度以控制 API 用量。模型 API 会按服务商规则计费。MarkItDown 的 PDF 转换依赖 PDF 文字层；扫描版 PDF 如果没有文字层，仍需先通过 OCR 生成可识别的 PDF。
 
 ## 部署 BabelDOC
 
@@ -33,19 +33,20 @@ Zotero 10 插件：从 Zotero 中直接调用本机的 BabelDOC 翻译 PDF，并
 
 ## 固定版本与依赖
 
-当前插件 `0.1.13` 的运行时约束如下：
+当前插件 `0.1.14` 的运行时约束如下：
 
 | 组件                       | 固定版本                                                 |
 | -------------------------- | -------------------------------------------------------- |
 | uv                         | `0.12.23`                                                |
 | Python                     | `3.12.15`                                                |
+| MarkItDown（PDF）          | `0.1.6`                                                  |
 | BabelDOC                   | `0.6.4`                                                  |
 | 依赖锁文件                 | [`runtime/uv.lock`](runtime/uv.lock)                     |
 | 部署清单（版本 + SHA-256） | [`runtime/requirements.lock`](runtime/requirements.lock) |
 
 锁文件包含 BabelDOC 的完整传递依赖、平台标记和包哈希；插件构建时会把部署清单嵌入 XPI，因此用户不需要手工复制 Python 配置文件。当前锁定的主要依赖包括：
 
-直接依赖为 `BabelDOC==0.6.4`；锁定的主要传递依赖包括：`numpy==2.5.3`、`scipy==1.18.1`、`scikit-image==0.26.0`、`scikit-learn==1.9.1`、`onnx==1.23.0`、`onnxruntime==1.30.0`、`opencv-python-headless==5.0.0.93`、`PyMuPDF==1.28.2`、`pydantic==2.13.5`、`openai==3.19.2`、`httpx==0.28.1`、`huggingface-hub==2.0.0`、`tiktoken==0.14.0`、`cryptography==50.0.1`、`freetype-py==2.5.1`、`uharfbuzz==0.56.2`、`xsdata==26.2`。完整依赖的版本、平台标记和 SHA-256 哈希以 `runtime/requirements.lock` 为准。
+直接依赖为 `BabelDOC==0.6.4` 和 `markitdown[pdf]==0.1.6`；锁定的主要传递依赖包括：`numpy==2.5.3`、`scipy==1.18.1`、`scikit-image==0.26.0`、`scikit-learn==1.9.1`、`onnx==1.23.0`、`onnxruntime==1.30.0`、`opencv-python-headless==5.0.0.93`、`PyMuPDF==1.28.2`、`pydantic==2.13.5`、`openai==3.19.2`、`httpx==0.28.1`、`huggingface-hub==2.0.0`、`tiktoken==0.14.0`、`cryptography==50.0.1`、`freetype-py==2.5.1`、`uharfbuzz==0.56.2`、`xsdata==26.2`。完整依赖的版本、平台标记和 SHA-256 哈希以 `runtime/requirements.lock` 为准。
 
 用户自己的 uv、Python 或 BabelDOC 不会被插件复用或升级。插件只有在发布了声明新运行时的新版插件后，才会要求重新部署。
 

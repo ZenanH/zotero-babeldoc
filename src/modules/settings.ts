@@ -1,6 +1,7 @@
 import { config } from "../../package.json";
 
 export const REQUIRED_BABELDOC_VERSION = config.babeldocVersion;
+export const REQUIRED_MARKITDOWN_VERSION = config.markitdownVersion;
 export const REQUIRED_UV_VERSION = config.uvVersion;
 export const REQUIRED_PYTHON_VERSION = config.pythonVersion;
 export const RUNTIME_ID = config.runtimeId;
@@ -124,6 +125,14 @@ export function getManagedBabelDocPythonPath(venvPath: string): string {
   const executableDirectory =
     Services.appinfo.OS === "WINNT" ? "Scripts" : "bin";
   const executable = Services.appinfo.OS === "WINNT" ? "python.exe" : "python";
+  return joinPath(venvPath, executableDirectory, executable);
+}
+
+export function getManagedMarkItDownPath(venvPath: string): string {
+  const executableDirectory =
+    Services.appinfo.OS === "WINNT" ? "Scripts" : "bin";
+  const executable =
+    Services.appinfo.OS === "WINNT" ? "markitdown.exe" : "markitdown";
   return joinPath(venvPath, executableDirectory, executable);
 }
 
