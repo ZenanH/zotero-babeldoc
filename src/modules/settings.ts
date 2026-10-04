@@ -137,17 +137,15 @@ export function getManagedMarkItDownPath(venvPath: string): string {
 }
 
 export function getManagedBabelDocInstallCommand(): string {
-  return Services.appinfo.OS === "WINNT"
-    ? "请在 Zotero 设置页点击“部署 / 修复 BabelDOC”。"
-    : "请在 Zotero 设置页点击“部署 / 修复 BabelDOC”。";
+  return "请在 Zotero 设置页点击“部署 / 修复 BabelDOC”，插件会一并配置 MarkItDown。";
 }
 
 export function getUnixBabelDocInstallCommand(): string {
-  return `点击上方按钮后，插件会自动配置 uv ${REQUIRED_UV_VERSION}，并安装 BabelDOC ${REQUIRED_BABELDOC_VERSION}。`;
+  return `点击上方按钮后，插件会自动配置 uv ${REQUIRED_UV_VERSION}，并在插件专用环境中安装 BabelDOC ${REQUIRED_BABELDOC_VERSION} 和 MarkItDown ${REQUIRED_MARKITDOWN_VERSION}。`;
 }
 
 export function getWindowsBabelDocInstallCommand(): string {
-  return `点击上方按钮后，插件会自动配置 uv ${REQUIRED_UV_VERSION}，并安装 BabelDOC ${REQUIRED_BABELDOC_VERSION}。`;
+  return `点击上方按钮后，插件会自动配置 uv ${REQUIRED_UV_VERSION}，并在插件专用环境中安装 BabelDOC ${REQUIRED_BABELDOC_VERSION} 和 MarkItDown ${REQUIRED_MARKITDOWN_VERSION}。`;
 }
 
 export function validateSettings(settings: TranslatorSettings): void {

@@ -42,8 +42,13 @@ interface RuntimeManifest {
 
 let deploymentPromise: Promise<BabelDocInstallation> | null = null;
 const activeRuntimeUsers = new Map<string, number>();
+let runtimeOperationTail: Promise<void> = Promise.resolve();
 
 export async function detectBabelDoc(): Promise<BabelDocInstallation> {
+  return withRuntimeOperationLock(detectBabelDocInternal);
+}
+
+async function detectBabelDocInternal(): Promise<BabelDocInstallation> {
   const manifest = await readRuntimeManifest();
   if (!manifest) {
     throw new Error(
@@ -58,7 +63,7 @@ export async function detectBabelDoc(): Promise<BabelDocInstallation> {
     manifest.markitdownVersion !== REQUIRED_MARKITDOWN_VERSION
   ) {
     throw new Error(
-      `当前插件需要 BabelDOC ${REQUIRED_BABELDOC_VERSION}、uv ${REQUIRED_UV_VERSION} 和 Python ${REQUIRED_PYTHON_VERSION}。请点击“部署 / 修复 BabelDOC”。`,
+      `当前插件需要 BabelDOC ${REQUIRED_BABELDOC_VERSION}、MarkItDown ${REQUIRED_MARKITDOWN_VERSION}、uv ${REQUIRED_UV_VERSION} 和 Python ${REQUIRED_PYTHON_VERSION}。请点击“部署 / 修复 BabelDOC”。`,
     );
   }
 
@@ -69,7 +74,7 @@ export async function detectBabelDoc(): Promise<BabelDocInstallation> {
     !(await pathExists(markitdownPath))
   ) {
     throw new Error(
-      `插件专用 BabelDOC 环境不完整。请点击“部署 / 修复 BabelDOC”。`,
+      `插件专用 BabelDOC 和 MarkItDown 环境不完整。请点击“部署 / 修复 BabelDOC”。`,
     );
   }
 
@@ -105,9 +110,11 @@ export async function detectBabelDoc(): Promise<BabelDocInstallation> {
 
 export async function deployBabelDoc(): Promise<BabelDocInstallation> {
   if (deploymentPromise) return deploymentPromise;
-  deploymentPromise = deployBabelDocInternal().finally(() => {
-    deploymentPromise = null;
-  });
+  deploymentPromise = withRuntimeOperationLock(deployBabelDocInternal).finally(
+    () => {
+      deploymentPromise = null;
+    },
+  );
   return deploymentPromise;
 }
 
@@ -209,7 +216,7 @@ async function deployBabelDocInternal(): Promise<BabelDocInstallation> {
       getManagedRuntimeManifestPath(),
       JSON.stringify(manifest, null, 2),
     );
-    await cleanupOldRuntimes(environmentPath);
+    await cleanupOldRuntimesInternal(environmentPath);
 
     return {
       path: getBabelDocExecutablePath(environmentPath),
@@ -219,7 +226,7 @@ async function deployBabelDocInternal(): Promise<BabelDocInstallation> {
   } catch (error) {
     await removeDirectory(runtimeDirectory);
     throw new Error(
-      `BabelDOC 部署失败。${compactDiagnostic(error instanceof Error ? error.message : String(error))}`,
+      `BabelDOC 和 MarkItDown 部署失败。${compactDiagnostic(error instanceof Error ? error.message : String(error))}`,
       { cause: error },
     );
   }
@@ -343,8 +350,11 @@ async function readRuntimeManifest(): Promise<RuntimeManifest | null> {
     }
     const runtimeDirectory = getPathUtils().parent(value.environmentPath);
     if (
-      getPathUtils().parent(runtimeDirectory) !==
-        getManagedRuntimesDirectory() ||
+      !runtimeDirectory ||
+      !sameRuntimePath(
+        getPathUtils().parent(runtimeDirectory) || "",
+        getManagedRuntimesDirectory(),
+      ) ||
       getPathUtils().filename(value.environmentPath) !== "venv" ||
       !isManagedRuntimeDirectory(runtimeDirectory)
     ) {
@@ -363,16 +373,19 @@ function getBabelDocExecutablePath(environmentPath: string): string {
   return joinPath(environmentPath, directory, executable);
 }
 
-async function cleanupOldRuntimes(
+async function cleanupOldRuntimesInternal(
   activeEnvironmentPath: string,
 ): Promise<void> {
   const activeDirectory = getPathUtils().parent(activeEnvironmentPath);
   const parent = getManagedRuntimesDirectory();
+  if (!activeDirectory) return;
   try {
     const children = await getIOUtils().getChildren(parent);
     for (const child of children as string[]) {
       if (!isManagedRuntimeDirectory(child)) continue;
-      if (child === activeDirectory || isRuntimeInUse(child)) continue;
+      if (sameRuntimePath(child, activeDirectory) || isRuntimeInUse(child)) {
+        continue;
+      }
       await removeDirectory(child);
     }
   } catch (error) {
@@ -380,21 +393,26 @@ async function cleanupOldRuntimes(
   }
 }
 
-function getManagedBabelDocVenvPathForRuntime(runtimePath: string): string {
-  return joinPath(runtimePath, "venv");
-}
-
 async function cleanupActiveRuntimeAndStaleRuntimes(): Promise<void> {
-  const manifest = await readRuntimeManifest();
-  if (!manifest) return;
-  await cleanupOldRuntimes(
-    getManagedBabelDocVenvPathForRuntime(manifest.environmentPath),
-  );
+  await withRuntimeOperationLock(async () => {
+    const manifest = await readRuntimeManifest();
+    if (!manifest) return;
+    // environmentPath already points to the runtime's venv. Do not append
+    // another /venv here: doing so makes cleanup mistake the active runtime for
+    // an old one and delete it immediately after a task finishes.
+    await cleanupOldRuntimesInternal(manifest.environmentPath);
+  });
 }
 
 function isRuntimeInUse(runtimeDirectory: string): boolean {
   for (const [runtimePath, count] of activeRuntimeUsers) {
-    if (count > 0 && getPathUtils().parent(runtimePath) === runtimeDirectory) {
+    if (
+      count > 0 &&
+      sameRuntimePath(
+        getPathUtils().parent(runtimePath) || "",
+        runtimeDirectory,
+      )
+    ) {
       return true;
     }
   }
@@ -404,6 +422,32 @@ function isRuntimeInUse(runtimeDirectory: string): boolean {
 function isManagedRuntimeDirectory(path: string): boolean {
   const name = getPathUtils().filename(path);
   return name.startsWith(`runtime-${RUNTIME_ID}-`);
+}
+
+function sameRuntimePath(left: string, right: string): boolean {
+  const normalize = (value: string) => {
+    const normalized = getPathUtils().normalize(value);
+    return Services.appinfo.OS === "WINNT"
+      ? normalized.toLowerCase()
+      : normalized;
+  };
+  return normalize(left) === normalize(right);
+}
+
+async function withRuntimeOperationLock<T>(
+  operation: () => Promise<T>,
+): Promise<T> {
+  const previous = runtimeOperationTail;
+  let release!: () => void;
+  runtimeOperationTail = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await previous;
+  try {
+    return await operation();
+  } finally {
+    release();
+  }
 }
 
 function parseVersion(output: string): string | null {

@@ -62,7 +62,11 @@ export async function registerPrefsScripts(win: Window): Promise<void> {
     windowsInstallCommand.textContent = getWindowsBabelDocInstallCommand();
   }
   setStatus(status, "配置尚未测试。", "neutral");
-  setStatus(babeldocStatus, "正在检测插件专用 BabelDOC…", "neutral");
+  setStatus(
+    babeldocStatus,
+    "正在检测插件专用 BabelDOC 和 MarkItDown…",
+    "neutral",
+  );
 
   const saveButton = document.getElementById(
     "babeldoctranslator-save",
@@ -114,14 +118,14 @@ export async function registerPrefsScripts(win: Window): Promise<void> {
     detectButton.disabled = true;
     setStatus(
       babeldocStatus,
-      "正在部署固定版本的 uv、Python 和 BabelDOC…",
+      "正在部署固定版本的 uv、Python、BabelDOC 和 MarkItDown…",
       "neutral",
     );
     try {
       const installation = await deployBabelDoc();
       setStatus(
         babeldocStatus,
-        `已部署 BabelDOC ${installation.version}：${installation.path}`,
+        `已部署 BabelDOC ${installation.version} 和 MarkItDown：${installation.path}`,
         "success",
       );
     } catch (error) {
@@ -151,12 +155,12 @@ export async function registerPrefsScripts(win: Window): Promise<void> {
 async function refreshBabelDocStatus(
   status: HTMLElement | null,
 ): Promise<void> {
-  setStatus(status, "正在检测插件专用 BabelDOC…", "neutral");
+  setStatus(status, "正在检测插件专用 BabelDOC 和 MarkItDown…", "neutral");
   try {
     const installation = await detectBabelDoc();
     setStatus(
       status,
-      `已检测到 BabelDOC ${installation.version}：${installation.path}`,
+      `已检测到 BabelDOC ${installation.version} 和 MarkItDown：${installation.path}`,
       "success",
     );
   } catch (error) {
