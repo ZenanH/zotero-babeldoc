@@ -1363,7 +1363,7 @@ soap = [
 
 [[package]]
 name = "zotero-babeldoc-runtime"
-version = "0.1.12"
+version = "0.1.13"
 source = { virtual = "." }
 dependencies = [
     { name = "babeldoc" },

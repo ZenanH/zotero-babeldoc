@@ -8,21 +8,21 @@ modifies a user's unrelated BabelDOC installation.
 
 ## Pinned runtime
 
-- Plugin version: `0.1.12`
+- Plugin version: `0.1.13`
 - Zotero: `10.*`
 - Node.js CI: `22`
 - pnpm CI: `11`
-- uv: `0.12.13`
-- Python: `3.12.13`
+- uv: `0.12.23`
+- Python: `3.12.15`
 - BabelDOC: `0.6.4`
-- Runtime ID: `babeldoc-0.6.4-python-3.12.13-lock-v1`
+- Runtime ID: `babeldoc-0.6.4-python-3.12.15-uv-0.12.23-lock-v2`
 - Dependency source: `runtime/pyproject.toml`
 - Resolver lock: `runtime/uv.lock`
 - Deployment lock with hashes: `runtime/requirements.lock`
 - Build entry point: `pnpm run build`
 - XPI output: `.scaffold/build/*.xpi`
 
-The lock was generated with uv 0.12.13. It contains the complete BabelDOC
+The lock was generated with uv 0.12.23. It contains the complete BabelDOC
 dependency graph, platform markers, and SHA-256 hashes. `src/modules/runtimeLock.ts`
 is generated from `runtime/requirements.lock` during the build and must not be
 edited manually.
