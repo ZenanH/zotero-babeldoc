@@ -1,6 +1,6 @@
 [project]
 name = "zotero-babeldoc-runtime"
-version = "0.1.16"
+version = "0.1.17"
 description = "Pinned runtime used by the Zotero BabelDOC plugin"
 requires-python = "==3.12.15"
 dependencies = [
