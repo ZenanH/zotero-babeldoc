@@ -8,7 +8,7 @@ modifies a user's unrelated BabelDOC installation.
 
 ## Pinned runtime
 
-- Plugin version: `0.1.15`
+- Plugin version: `0.1.16`
 - Zotero: `10.*`
 - Node.js CI: `22`
 - pnpm CI: `11`

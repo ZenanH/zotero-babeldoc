@@ -47,17 +47,35 @@ export async function summarizeSelectedPDF(win: Window): Promise<void> {
   }
 
   activeSummaries.add(attachment.id);
-  registerTranslationTask(attachment, win);
+  const result = await summarizePDF(attachment, win, settings);
+  if (!result.ok) {
+    win.alert(`论文总结失败：${result.error || "未知错误"}`);
+  }
+}
+
+interface SummaryResult {
+  label: string;
+  ok: boolean;
+  error?: string;
+}
+
+async function summarizePDF(
+  attachment: any,
+  win: Window,
+  settings: ReturnType<typeof getSettings>,
+): Promise<SummaryResult> {
   let taskDirectory = "";
   let releaseRuntime: (() => void) | null = null;
+  const label = getAttachmentLabel(attachment);
+  registerTranslationTask(attachment, win, "summary");
   try {
-    updateTranslationTask(attachment.id, "准备论文总结");
+    updateTranslationTask(attachment.id, "准备论文总结", "summary");
     const inputPath = await getAttachmentPath(attachment);
     if (!inputPath || !(await pathExists(inputPath))) {
       throw new Error("找不到 PDF 的本地文件。请确认附件已下载到本机。");
     }
 
-    updateTranslationTask(attachment.id, "检测插件运行环境");
+    updateTranslationTask(attachment.id, "检测插件运行环境", "summary");
     const installation = await detectBabelDoc();
     releaseRuntime = acquireBabelDocRuntime(installation.runtimePath);
     const markitdownPath = getManagedMarkItDownPath(installation.runtimePath);
@@ -72,7 +90,11 @@ export async function summarizeSelectedPDF(win: Window): Promise<void> {
       taskDirectory,
       `${getFileStem(inputPath)}.md`,
     );
-    updateTranslationTask(attachment.id, "MarkItDown 正在将 PDF 转为 Markdown");
+    updateTranslationTask(
+      attachment.id,
+      "MarkItDown 正在将 PDF 转为 Markdown",
+      "summary",
+    );
     const conversion = await runExternalProcess(
       markitdownPath,
       [inputPath, "--output", markdownPath],
@@ -84,7 +106,7 @@ export async function summarizeSelectedPDF(win: Window): Promise<void> {
       );
     }
 
-    updateTranslationTask(attachment.id, "读取 Markdown 正文");
+    updateTranslationTask(attachment.id, "读取 Markdown 正文", "summary");
     const markdown = normalizeMarkdown(
       await getIOUtils().readUTF8(markdownPath),
     );
@@ -105,20 +127,35 @@ export async function summarizeSelectedPDF(win: Window): Promise<void> {
     const title = String(parentItem.getField("title") || "未命名论文");
     const chunks = splitText(markdown, CHUNK_CHAR_LIMIT);
     const summary = await summarizePaper(settings, title, chunks, (message) => {
-      updateTranslationTask(attachment.id, message);
+      updateTranslationTask(attachment.id, message, "summary");
     });
     await saveSummaryNote(parentItem, title, summary);
-    finishTranslationTask(attachment.id, true);
+    finishTranslationTask(attachment.id, true, "", "summary");
+    return { label, ok: true };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     ztoolkit.log("Paper summary failed", error);
-    finishTranslationTask(attachment.id, false, message);
-    win.alert(`论文总结失败：${message}`);
+    finishTranslationTask(attachment.id, false, message, "summary");
+    return { label, ok: false, error: message };
   } finally {
     activeSummaries.delete(attachment.id);
     releaseRuntime?.();
-    if (taskDirectory) await removeDirectory(taskDirectory);
+    if (taskDirectory) {
+      try {
+        await removeDirectory(taskDirectory);
+      } catch (error) {
+        ztoolkit.log("Paper summary temporary directory cleanup failed", error);
+      }
+    }
   }
+}
+
+function getAttachmentLabel(attachment: any): string {
+  return String(
+    attachment.getField?.("title") ||
+      attachment.attachmentFilename ||
+      `PDF ${attachment.id}`,
+  );
 }
 
 async function getAttachmentPath(attachment: any): Promise<string> {

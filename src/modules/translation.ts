@@ -21,8 +21,9 @@ import {
 } from "./statusBar";
 
 const activeAttachments = new Set<number>();
+export type TranslationTaskKind = "translation" | "summary";
 const activeTasks = new Map<
-  number,
+  string,
   { label: string; stage: string; updatedAt: number }
 >();
 let statusBarCloseTimer: ReturnType<typeof setTimeout> | null = null;
@@ -147,7 +148,11 @@ export async function translateSelectedPDF(win: Window): Promise<void> {
   }
 }
 
-export function registerTranslationTask(attachment: any, win: Window): void {
+export function registerTranslationTask(
+  attachment: any,
+  win: Window,
+  kind: TranslationTaskKind = "translation",
+): void {
   clearStatusBarCloseTimer();
   if (activeTasks.size === 0) {
     completedTaskCount = 0;
@@ -160,7 +165,7 @@ export function registerTranslationTask(attachment: any, win: Window): void {
       attachment.attachmentFilename ||
       `PDF ${attachment.id}`,
   );
-  activeTasks.set(attachment.id, {
+  activeTasks.set(getTaskKey(attachment.id, kind), {
     label,
     stage: "等待开始",
     updatedAt: Date.now(),
@@ -172,8 +177,9 @@ export function registerTranslationTask(attachment: any, win: Window): void {
 export function updateTranslationTask(
   attachmentID: number,
   stage: string,
+  kind: TranslationTaskKind = "translation",
 ): void {
-  const task = activeTasks.get(attachmentID);
+  const task = activeTasks.get(getTaskKey(attachmentID, kind));
   if (!task) return;
   task.stage = stage;
   task.updatedAt = Date.now();
@@ -184,10 +190,11 @@ export function finishTranslationTask(
   attachmentID: number,
   success: boolean,
   errorMessage = "",
+  kind: TranslationTaskKind = "translation",
 ): void {
-  const task = activeTasks.get(attachmentID);
+  const task = activeTasks.get(getTaskKey(attachmentID, kind));
   if (!task) return;
-  activeTasks.delete(attachmentID);
+  activeTasks.delete(getTaskKey(attachmentID, kind));
   if (success) completedTaskCount += 1;
   else {
     failedTaskCount += 1;
@@ -255,6 +262,13 @@ function truncateProgressLabel(label: string): string {
 function compactProgressError(message: string): string {
   const compact = message.replace(/\s+/g, " ").trim();
   return compact.length > 120 ? `${compact.slice(0, 117)}...` : compact;
+}
+
+function getTaskKey(
+  attachmentID: number,
+  kind: TranslationTaskKind,
+): string {
+  return `${kind}:${attachmentID}`;
 }
 
 async function getAttachmentPath(attachment: any): Promise<string> {
