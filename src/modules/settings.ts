@@ -36,7 +36,7 @@ export const DEFAULT_SETTINGS: TranslatorSettings = {
   apiKey: "",
   model: "gpt-4o-mini",
   sourceLanguage: "en",
-  targetLanguage: "zh",
+  targetLanguage: "zh-CN",
   qps: 10,
   poolMaxWorkers: 8,
   watermarkOutputMode: "no_watermark",
@@ -113,6 +113,19 @@ export function saveSettings(settings: TranslatorSettings): void {
 
 export function getManagedRuntimeRoot(): string {
   return joinPath(getHomeDirectory(), ".babeldoc-translator");
+}
+
+/**
+ * Keep BabelDOC's cache and other user-home based files inside the plugin's
+ * managed root. BabelDOC resolves its cache at import time with Path.home(),
+ * so inheriting Zotero's home would let it read or modify a global cache.
+ */
+export function getManagedProcessEnvironment(): Record<string, string> {
+  const managedHome = getManagedRuntimeRoot();
+  if (Services.appinfo.OS === "WINNT") {
+    return { HOME: managedHome, USERPROFILE: managedHome };
+  }
+  return { HOME: managedHome };
 }
 
 export function getManagedUvDirectory(): string {
@@ -237,12 +250,59 @@ export function tomlString(value: string): string {
 export function normalizeBabelDocLanguage(value: string): string {
   const trimmed = String(value || "").trim();
   const normalized = trimmed.toLowerCase().replaceAll("_", "-");
-  return CHINESE_LANGUAGE_ALIASES.has(normalized) ? "zh" : trimmed;
+  return CHINESE_LANGUAGE_ALIASES.has(normalized) ? "zh-CN" : trimmed;
+}
+
+export function getBabelDocLanguageLabel(language: string): string {
+  const normalized = normalizeBabelDocLanguage(language).toLowerCase();
+  const labels: Record<string, string> = {
+    "zh-cn": "Simplified Chinese (简体中文)",
+    "zh-hans": "Simplified Chinese (简体中文)",
+    "zh-tw": "Traditional Chinese (繁體中文)",
+    "zh-hant": "Traditional Chinese (繁體中文)",
+    en: "English",
+    ja: "Japanese (日本語)",
+    ko: "Korean (한국어)",
+    fr: "French (Français)",
+    de: "German (Deutsch)",
+    es: "Spanish (Español)",
+    it: "Italian (Italiano)",
+    ru: "Russian (Русский)",
+    pt: "Portuguese (Português)",
+  };
+  return labels[normalized] || normalized || language;
+}
+
+export function buildBabelDocSystemPrompt(
+  sourceLanguage: string,
+  targetLanguage: string,
+): string {
+  const source = normalizeBabelDocLanguage(sourceLanguage);
+  const target = normalizeBabelDocLanguage(targetLanguage);
+  const lines = [
+    "You are a professional academic translation engine.",
+    `Translate from ${getBabelDocLanguageLabel(source)} (code: ${source}) to ${getBabelDocLanguageLabel(target)} (code: ${target}).`,
+    "Translate every human-readable sentence and paragraph into the target language.",
+    "Preserve formulas, numbers, citations, URLs, code, placeholders, and markup tags exactly when they are not human-readable prose.",
+    "Output only the translated text.",
+  ];
+  if (["zh", "zh-cn", "zh-hans"].includes(target.toLowerCase())) {
+    lines.splice(
+      3,
+      0,
+      "The output must be Simplified Chinese; do not return ordinary English prose or the unchanged source text.",
+    );
+  }
+  return lines.join("\n");
 }
 
 export function renderBabelDocToml(settings: TranslatorSettings): string {
   const sourceLanguage = normalizeBabelDocLanguage(settings.sourceLanguage);
   const targetLanguage = normalizeBabelDocLanguage(settings.targetLanguage);
+  const customSystemPrompt = buildBabelDocSystemPrompt(
+    sourceLanguage,
+    targetLanguage,
+  );
   return [
     "[babeldoc]",
     "debug = false",
@@ -254,6 +314,8 @@ export function renderBabelDocToml(settings: TranslatorSettings): string {
     `openai-model = ${tomlString(settings.model)}`,
     `openai-base-url = ${tomlString(settings.baseUrl.replace(/\/+$/, ""))}`,
     `openai-api-key = ${tomlString(settings.apiKey)}`,
+    `custom-system-prompt = ${tomlString(customSystemPrompt)}`,
+    "ignore-cache = true",
     "enable-json-mode-if-requested = false",
     `pool-max-workers = ${clampInteger(settings.poolMaxWorkers, 1, 64)}`,
     `no-dual = ${settings.translationOutputMode === "mono"}`,

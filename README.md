@@ -26,6 +26,7 @@ Zotero 10 插件：从 Zotero 中直接调用本机的 BabelDOC 翻译 PDF，并
 ~/.babeldoc-translator/
 ├── uv/0.12.23/                  # 插件专用 uv
 ├── runtimes/runtime-<runtime-id>-<deployment>/venv/ # 已验证的 Python 环境
+├── .cache/babeldoc/             # 插件专用 BabelDOC 缓存
 └── active-runtime.json          # 已验证并正在使用的运行时
 ```
 
@@ -33,7 +34,7 @@ Zotero 10 插件：从 Zotero 中直接调用本机的 BabelDOC 翻译 PDF，并
 
 ## 固定版本与依赖
 
-当前插件 `0.1.17` 的运行时约束如下：
+当前插件 `0.1.19` 的运行时约束如下：
 
 | 组件                       | 固定版本                                                 |
 | -------------------------- | -------------------------------------------------------- |
@@ -67,7 +68,7 @@ Zotero 10 插件：从 Zotero 中直接调用本机的 BabelDOC 翻译 PDF，并
 
 插件会在 Zotero 数据目录的 `babeldoc-translator/babeldoc.toml` 中维护 TOML，并在每个翻译任务中使用配置副本。输出模式会自动转换为 BabelDOC 的 `no-dual` 和 `no-mono` 选项，不需要手工编辑 TOML。
 
-目标语言支持 BabelDOC 语言代码；中文可填写 `zh`、`zh-CN` 或“中文”，插件会统一按 `zh` 传给 BabelDOC。
+目标语言支持 BabelDOC 语言代码；中文可填写 `zh`、`zh-CN` 或“中文”，插件会统一按 `zh-CN` 传给 BabelDOC。翻译任务会明确要求模型输出目标语言，并在导入前检查 PDF 的目标语言文字；插件也会绕过 BabelDOC 的旧翻译缓存，避免错误的英文结果被重复使用。
 
 ## 兼容性
 

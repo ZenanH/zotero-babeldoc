@@ -6,6 +6,7 @@ import {
   getManagedBabelDocInstallCommand,
   getManagedBabelDocPythonPath,
   getManagedMarkItDownPath,
+  getManagedProcessEnvironment,
   getManagedRuntimeManifestPath,
   getManagedRuntimesDirectory,
   getManagedPythonDirectory,
@@ -78,9 +79,11 @@ async function detectBabelDocInternal(): Promise<BabelDocInstallation> {
     );
   }
 
-  const markitdownResult = await runExternalProcess(markitdownPath, [
-    "--version",
-  ]);
+  const markitdownResult = await runExternalProcess(
+    markitdownPath,
+    ["--version"],
+    { environment: getManagedProcessEnvironment() },
+  );
   const markitdownVersion = parseVersion(
     markitdownResult.stdout || markitdownResult.stderr,
   );
@@ -93,7 +96,11 @@ async function detectBabelDocInternal(): Promise<BabelDocInstallation> {
     );
   }
 
-  const result = await runExternalProcess(executablePath, ["--version"]);
+  const result = await runExternalProcess(
+    executablePath,
+    ["--version"],
+    { environment: getManagedProcessEnvironment() },
+  );
   const version = parseVersion(result.stdout || result.stderr);
   if (result.exitCode !== 0 || version !== REQUIRED_BABELDOC_VERSION) {
     throw new Error(
@@ -152,7 +159,12 @@ async function deployBabelDocInternal(): Promise<BabelDocInstallation> {
         "--no-project",
         REQUIRED_PYTHON_VERSION,
       ],
-      { environment: { UV_PYTHON_INSTALL_DIR: getManagedPythonDirectory() } },
+      {
+        environment: {
+          ...getManagedProcessEnvironment(),
+          UV_PYTHON_INSTALL_DIR: getManagedPythonDirectory(),
+        },
+      },
     );
     if (pythonResult.exitCode !== 0 || !pythonResult.stdout.trim()) {
       throw new Error("无法定位插件专用 Python 运行时。");
@@ -177,9 +189,11 @@ async function deployBabelDocInternal(): Promise<BabelDocInstallation> {
     ]);
 
     const executablePath = getBabelDocExecutablePath(environmentPath);
-    const versionResult = await runExternalProcess(executablePath, [
-      "--version",
-    ]);
+    const versionResult = await runExternalProcess(
+      executablePath,
+      ["--version"],
+      { environment: getManagedProcessEnvironment() },
+    );
     const version = parseVersion(versionResult.stdout || versionResult.stderr);
     if (versionResult.exitCode !== 0 || version !== REQUIRED_BABELDOC_VERSION) {
       throw new Error(
@@ -188,9 +202,11 @@ async function deployBabelDocInternal(): Promise<BabelDocInstallation> {
     }
 
     const markitdownPath = getManagedMarkItDownPath(environmentPath);
-    const markitdownResult = await runExternalProcess(markitdownPath, [
-      "--version",
-    ]);
+    const markitdownResult = await runExternalProcess(
+      markitdownPath,
+      ["--version"],
+      { environment: getManagedProcessEnvironment() },
+    );
     const markitdownVersion = parseVersion(
       markitdownResult.stdout || markitdownResult.stderr,
     );
@@ -259,17 +275,25 @@ async function ensureUv(): Promise<string> {
   await ensureDirectory(getManagedUvDirectory());
   const result =
     Services.appinfo.OS === "WINNT"
-      ? await runExternalProcess(getWindowsPowerShellPath(), [
-          "-NoProfile",
-          "-ExecutionPolicy",
-          "Bypass",
-          "-Command",
-          `$env:UV_INSTALL_DIR='${escapePowerShell(getManagedUvDirectory())}'; $env:UV_NO_MODIFY_PATH='1'; irm https://astral.sh/uv/${REQUIRED_UV_VERSION}/install.ps1 | iex`,
-        ])
-      : await runExternalProcess("/bin/sh", [
-          "-c",
-          `curl -LsSf https://astral.sh/uv/${REQUIRED_UV_VERSION}/install.sh | env UV_INSTALL_DIR=${shellQuote(getManagedUvDirectory())} UV_NO_MODIFY_PATH=1 sh`,
-        ]);
+      ? await runExternalProcess(
+          getWindowsPowerShellPath(),
+          [
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-Command",
+            `$env:UV_INSTALL_DIR='${escapePowerShell(getManagedUvDirectory())}'; $env:UV_NO_MODIFY_PATH='1'; irm https://astral.sh/uv/${REQUIRED_UV_VERSION}/install.ps1 | iex`,
+          ],
+          { environment: getManagedProcessEnvironment() },
+        )
+      : await runExternalProcess(
+          "/bin/sh",
+          [
+            "-c",
+            `curl -LsSf https://astral.sh/uv/${REQUIRED_UV_VERSION}/install.sh | env UV_INSTALL_DIR=${shellQuote(getManagedUvDirectory())} UV_NO_MODIFY_PATH=1 sh`,
+          ],
+          { environment: getManagedProcessEnvironment() },
+        );
   if (result.exitCode !== 0 || !(await hasRequiredUvVersion(managedPath))) {
     throw new Error(
       `无法配置固定版本 uv ${REQUIRED_UV_VERSION}。${compactDiagnostic(result.stderr || result.stdout)}`,
@@ -315,7 +339,11 @@ async function getUvCandidates(): Promise<string[]> {
 async function hasRequiredUvVersion(path: string): Promise<boolean> {
   if (!(await pathExists(path))) return false;
   try {
-    const result = await runExternalProcess(path, ["--version"]);
+    const result = await runExternalProcess(
+      path,
+      ["--version"],
+      { environment: getManagedProcessEnvironment() },
+    );
     return (
       result.exitCode === 0 &&
       new RegExp(`\\b${escapeRegExp(REQUIRED_UV_VERSION)}\\b`).test(
@@ -329,7 +357,10 @@ async function hasRequiredUvVersion(path: string): Promise<boolean> {
 
 async function runUv(path: string, args: string[]): Promise<void> {
   const result = await runExternalProcess(path, ["--no-progress", ...args], {
-    environment: { UV_PYTHON_INSTALL_DIR: getManagedPythonDirectory() },
+    environment: {
+      ...getManagedProcessEnvironment(),
+      UV_PYTHON_INSTALL_DIR: getManagedPythonDirectory(),
+    },
   });
   if (result.exitCode !== 0) {
     throw new Error(compactDiagnostic(result.stderr || result.stdout));

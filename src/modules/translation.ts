@@ -1,12 +1,15 @@
 import {
   createTaskDirectory,
   getFileStem,
+  getManagedMarkItDownPath,
+  getManagedProcessEnvironment,
   getIOUtils,
   getSettings,
   joinPath,
   pathExists,
   removeDirectory,
   renderBabelDocToml,
+  buildBabelDocSystemPrompt,
   validateSettings,
   writeManagedConfig,
   writeTextAtomically,
@@ -101,6 +104,9 @@ export async function translateSelectedPDF(win: Window): Promise<void> {
         sourceLanguage,
         "--lang-out",
         targetLanguage,
+        "--custom-system-prompt",
+        buildBabelDocSystemPrompt(sourceLanguage, targetLanguage),
+        "--ignore-cache",
         "--qps",
         String(settings.qps),
         "--pool-max-workers",
@@ -109,7 +115,10 @@ export async function translateSelectedPDF(win: Window): Promise<void> {
         settings.watermarkOutputMode,
         settings.translationOutputMode === "mono" ? "--no-dual" : "--no-mono",
       ],
-      { workdir: taskDirectory },
+      {
+        workdir: taskDirectory,
+        environment: getManagedProcessEnvironment(),
+      },
     );
     if (result.exitCode !== 0) {
       const details = redactDiagnostic(
@@ -137,6 +146,14 @@ export async function translateSelectedPDF(win: Window): Promise<void> {
           : `BabelDOC 已结束，但没有找到目标语言 ${targetLanguage} 的翻译 PDF。`,
       );
     }
+
+    updateTranslationTask(attachment.id, "验证翻译结果语言");
+    await validateTranslatedPDF(
+      outputPath,
+      targetLanguage,
+      getManagedMarkItDownPath(babeldoc.runtimePath),
+      taskDirectory,
+    );
 
     updateTranslationTask(attachment.id, "导入 Zotero 子附件");
     const parentItem = (await Zotero.Items.getAsync(parentID)) as any;
@@ -329,6 +346,75 @@ async function findTranslatedPDF(
   } catch {
     return null;
   }
+}
+
+async function validateTranslatedPDF(
+  outputPath: string,
+  targetLanguage: string,
+  markitdownPath: string,
+  taskDirectory: string,
+): Promise<void> {
+  const signal = getTargetLanguageSignal(targetLanguage);
+  if (!signal) return;
+
+  const markdownPath = joinPath(taskDirectory, "translation-check.md");
+  const conversion = await runExternalProcess(
+    markitdownPath,
+    [outputPath, "--output", markdownPath],
+    {
+      workdir: taskDirectory,
+      environment: getManagedProcessEnvironment(),
+    },
+  );
+  if (conversion.exitCode !== 0 || !(await pathExists(markdownPath))) {
+    throw new Error(
+      `无法验证翻译 PDF 的目标语言（MarkItDown 退出码 ${conversion.exitCode}）。请检查输出文件或重新尝试。`,
+    );
+  }
+
+  const text = normalizeExtractedText(
+    await getIOUtils().readUTF8(markdownPath),
+  );
+  const signalCount = countMatches(text, signal.pattern);
+  if (signalCount < signal.minimumSignals) {
+    throw new Error(
+      `翻译结果疑似仍为原文：目标语言 ${targetLanguage} 仅检测到 ${signalCount} 个目标文字。未导入英文 PDF，请检查模型配置后重试。`,
+    );
+  }
+}
+
+function getTargetLanguageSignal(
+  targetLanguage: string,
+): { pattern: RegExp; minimumSignals: number } | null {
+  const normalized = targetLanguage.toLowerCase().replaceAll("_", "-");
+  if (
+    normalized === "zh" ||
+    normalized === "zh-cn" ||
+    normalized === "zh-hans"
+  ) {
+    return { pattern: /[\u3400-\u9fff]/g, minimumSignals: 8 };
+  }
+  if (normalized === "ja" || normalized === "ja-jp") {
+    return {
+      pattern: /[\u3040-\u30ff\u3400-\u9fff]/g,
+      minimumSignals: 8,
+    };
+  }
+  if (normalized === "ko" || normalized === "ko-kr") {
+    return { pattern: /[\uac00-\ud7af]/g, minimumSignals: 8 };
+  }
+  if (["ru", "uk", "bg", "sr"].includes(normalized)) {
+    return { pattern: /[\u0400-\u04ff]/g, minimumSignals: 8 };
+  }
+  return null;
+}
+
+function countMatches(text: string, pattern: RegExp): number {
+  return text.match(pattern)?.length || 0;
+}
+
+function normalizeExtractedText(text: string): string {
+  return text.replaceAll("\u0000", "").replace(/\s+/g, " ").trim();
 }
 
 function redactDiagnostic(

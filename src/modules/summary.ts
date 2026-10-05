@@ -5,6 +5,7 @@ import {
   getFileStem,
   getIOUtils,
   getManagedMarkItDownPath,
+  getManagedProcessEnvironment,
   getSettings,
   joinPath,
   pathExists,
@@ -98,7 +99,10 @@ async function summarizePDF(
     const conversion = await runExternalProcess(
       markitdownPath,
       [inputPath, "--output", markdownPath],
-      { workdir: taskDirectory },
+      {
+        workdir: taskDirectory,
+        environment: getManagedProcessEnvironment(),
+      },
     );
     if (conversion.exitCode !== 0 || !(await pathExists(markdownPath))) {
       throw new Error(
