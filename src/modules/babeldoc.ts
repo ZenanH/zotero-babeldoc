@@ -96,11 +96,9 @@ async function detectBabelDocInternal(): Promise<BabelDocInstallation> {
     );
   }
 
-  const result = await runExternalProcess(
-    executablePath,
-    ["--version"],
-    { environment: getManagedProcessEnvironment() },
-  );
+  const result = await runExternalProcess(executablePath, ["--version"], {
+    environment: getManagedProcessEnvironment(),
+  });
   const version = parseVersion(result.stdout || result.stderr);
   if (result.exitCode !== 0 || version !== REQUIRED_BABELDOC_VERSION) {
     throw new Error(
@@ -339,11 +337,9 @@ async function getUvCandidates(): Promise<string[]> {
 async function hasRequiredUvVersion(path: string): Promise<boolean> {
   if (!(await pathExists(path))) return false;
   try {
-    const result = await runExternalProcess(
-      path,
-      ["--version"],
-      { environment: getManagedProcessEnvironment() },
-    );
+    const result = await runExternalProcess(path, ["--version"], {
+      environment: getManagedProcessEnvironment(),
+    });
     return (
       result.exitCode === 0 &&
       new RegExp(`\\b${escapeRegExp(REQUIRED_UV_VERSION)}\\b`).test(
