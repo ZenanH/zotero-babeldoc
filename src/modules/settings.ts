@@ -250,7 +250,10 @@ export function tomlString(value: string): string {
 export function normalizeBabelDocLanguage(value: string): string {
   const trimmed = String(value || "").trim();
   const normalized = trimmed.toLowerCase().replaceAll("_", "-");
-  return CHINESE_LANGUAGE_ALIASES.has(normalized) ? "zh-CN" : trimmed;
+  // BabelDOC's language table and output naming use the lowercase `zh-cn`
+  // code.  Keep one canonical value internally so the CLI, TOML, prompt and
+  // output-file lookup cannot disagree about the requested language.
+  return CHINESE_LANGUAGE_ALIASES.has(normalized) ? "zh-cn" : trimmed;
 }
 
 export function getBabelDocLanguageLabel(language: string): string {
@@ -282,9 +285,10 @@ export function buildBabelDocSystemPrompt(
   const lines = [
     "You are a professional academic translation engine.",
     `Translate from ${getBabelDocLanguageLabel(source)} (code: ${source}) to ${getBabelDocLanguageLabel(target)} (code: ${target}).`,
-    "Translate every human-readable sentence and paragraph into the target language.",
+    "Translate every human-readable sentence and paragraph into the required target language.",
+    "Do not leave ordinary source-language prose unchanged when it can be translated.",
     "Preserve formulas, numbers, citations, URLs, code, placeholders, and markup tags exactly when they are not human-readable prose.",
-    "Output only the translated text.",
+    "Follow BabelDOC's output format exactly. If the request asks for a JSON array, return only that JSON array and put each translation in its object's output field.",
   ];
   if (["zh", "zh-cn", "zh-hans"].includes(target.toLowerCase())) {
     lines.splice(

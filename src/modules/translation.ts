@@ -150,6 +150,7 @@ export async function translateSelectedPDF(win: Window): Promise<void> {
     updateTranslationTask(attachment.id, "验证翻译结果语言");
     await validateTranslatedPDF(
       outputPath,
+      inputPath,
       targetLanguage,
       getManagedMarkItDownPath(babeldoc.runtimePath),
       taskDirectory,
@@ -342,7 +343,10 @@ async function findTranslatedPDF(
     if (languageMatches.length > 0) {
       return languageMatches.sort().reverse()[0];
     }
-    return outputFiles.length === 1 ? outputFiles[0] : null;
+    // Never import an arbitrary `.mono.pdf`/`.dual.pdf` file.  BabelDOC's
+    // target-language suffix is the only reliable way to distinguish a
+    // translated result from a copied or partially generated source PDF.
+    return null;
   } catch {
     return null;
   }
@@ -350,6 +354,7 @@ async function findTranslatedPDF(
 
 async function validateTranslatedPDF(
   outputPath: string,
+  inputPath: string,
   targetLanguage: string,
   markitdownPath: string,
   taskDirectory: string,
@@ -358,6 +363,10 @@ async function validateTranslatedPDF(
   if (!signal) return;
 
   const markdownPath = joinPath(taskDirectory, "translation-check.md");
+  const sourceMarkdownPath = joinPath(
+    taskDirectory,
+    "translation-source-check.md",
+  );
   const conversion = await runExternalProcess(
     markitdownPath,
     [outputPath, "--output", markdownPath],
@@ -372,13 +381,44 @@ async function validateTranslatedPDF(
     );
   }
 
+  const sourceConversion = await runExternalProcess(
+    markitdownPath,
+    [inputPath, "--output", sourceMarkdownPath],
+    {
+      workdir: taskDirectory,
+      environment: getManagedProcessEnvironment(),
+    },
+  );
+  if (
+    sourceConversion.exitCode !== 0 ||
+    !(await pathExists(sourceMarkdownPath))
+  ) {
+    throw new Error(
+      `无法读取原始 PDF 以验证翻译结果（MarkItDown 退出码 ${sourceConversion.exitCode}）。请检查输入文件或重新尝试。`,
+    );
+  }
+
   const text = normalizeExtractedText(
     await getIOUtils().readUTF8(markdownPath),
   );
+  const sourceText = normalizeExtractedText(
+    await getIOUtils().readUTF8(sourceMarkdownPath),
+  );
   const signalCount = countMatches(text, signal.pattern);
-  if (signalCount < signal.minimumSignals) {
+  const sourceLetterCount = countSourceLetters(sourceText, targetLanguage);
+  const requiredSignals = Math.max(
+    signal.minimumSignals,
+    Math.floor(sourceLetterCount * 0.1),
+  );
+  if (signalCount < requiredSignals) {
     throw new Error(
-      `翻译结果疑似仍为原文：目标语言 ${targetLanguage} 仅检测到 ${signalCount} 个目标文字。未导入英文 PDF，请检查模型配置后重试。`,
+      `翻译结果疑似仍为原文：目标语言 ${targetLanguage} 检测到 ${signalCount} 个目标文字，至少需要 ${requiredSignals} 个。未导入英文 PDF，请检查模型配置后重试。`,
+    );
+  }
+
+  if (normalizeForComparison(text) === normalizeForComparison(sourceText)) {
+    throw new Error(
+      `翻译结果与原始 PDF 文本完全相同，未导入英文 PDF。请检查模型配置后重试。`,
     );
   }
 }
@@ -411,6 +451,32 @@ function getTargetLanguageSignal(
 
 function countMatches(text: string, pattern: RegExp): number {
   return text.match(pattern)?.length || 0;
+}
+
+function countSourceLetters(text: string, targetLanguage: string): number {
+  const normalized = targetLanguage.toLowerCase().replaceAll("_", "-");
+  if (
+    normalized === "zh" ||
+    normalized === "zh-cn" ||
+    normalized === "zh-hans" ||
+    normalized === "ja" ||
+    normalized === "ja-jp" ||
+    normalized === "ko" ||
+    normalized === "ko-kr"
+  ) {
+    return countMatches(text, /[A-Za-z]/g);
+  }
+  if (["ru", "uk", "bg", "sr"].includes(normalized)) {
+    return countMatches(text, /[A-Za-z\u0400-\u04ff]/g);
+  }
+  return countMatches(text, /\p{L}/gu);
+}
+
+function normalizeForComparison(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[\s\p{P}\p{S}]+/gu, "")
+    .trim();
 }
 
 function normalizeExtractedText(text: string): string {
