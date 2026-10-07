@@ -98,7 +98,7 @@ export async function registerPrefsScripts(win: Window): Promise<void> {
   deployButton.addEventListener("command", async () => {
     deployButton.disabled = true;
     detectButton.disabled = true;
-    setStatus(babeldocStatus, "正在配置翻译环境…", "neutral");
+    const stopSpinner = startStatusSpinner(babeldocStatus, "正在配置翻译环境");
     try {
       const installation = await deployBabelDoc();
       setStatus(
@@ -113,6 +113,7 @@ export async function registerPrefsScripts(win: Window): Promise<void> {
         "error",
       );
     } finally {
+      stopSpinner();
       deployButton.disabled = false;
       detectButton.disabled = false;
     }
@@ -197,4 +198,19 @@ function setStatus(
   if (!element) return;
   element.textContent = message;
   element.setAttribute("data-status", kind);
+}
+
+function startStatusSpinner(
+  element: HTMLElement | null,
+  message: string,
+): () => void {
+  const frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+  let frameIndex = 0;
+  const update = () => {
+    setStatus(element, `${message} ${frames[frameIndex]}`, "neutral");
+    frameIndex = (frameIndex + 1) % frames.length;
+  };
+  update();
+  const timer = setInterval(update, 160);
+  return () => clearInterval(timer);
 }

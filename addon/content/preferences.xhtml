@@ -2,7 +2,6 @@
   id="babeldoctranslator-preferences"
   onload="Zotero.BabelDocTranslator.hooks.onPrefsEvent('load', { window })"
 >
-  <label><html:h2>Zotero BabelDOC</html:h2></label>
   <description>
     在 Zotero 中使用本机 BabelDOC 翻译 PDF，并将结果保存到原文献下。
   </description>
@@ -12,6 +11,7 @@
     <description id="babeldoctranslator-babeldoc-status" />
     <hbox align="center" style="margin-top: 8px">
       <button id="babeldoctranslator-deploy" label="配置 / 修复环境" />
+      <spacer width="8" />
       <button id="babeldoctranslator-detect" label="检查环境" />
     </hbox>
   </groupbox>
@@ -21,74 +21,62 @@
     <description
       >填写兼容 OpenAI 接口的 Base URL、API Key 和模型名称。</description
     >
-    <grid flex="1">
-      <columns>
-        <column flex="0" />
-        <column flex="1" />
-      </columns>
-      <rows>
-        <row align="center">
-          <html:label for="babeldoctranslator-base-url">Base URL</html:label>
-          <html:input
-            id="babeldoctranslator-base-url"
-            type="url"
-            flex="1"
-            placeholder="https://api.openai.com/v1"
-          />
-        </row>
-        <row align="center">
-          <html:label for="babeldoctranslator-api-key">API Key</html:label>
-          <html:input
-            id="babeldoctranslator-api-key"
-            type="password"
-            flex="1"
-            autocomplete="off"
-          />
-        </row>
-        <row align="center">
-          <html:label for="babeldoctranslator-model">模型名称</html:label>
-          <html:input
-            id="babeldoctranslator-model"
-            type="text"
-            flex="1"
-            placeholder="gpt-4o-mini"
-          />
-        </row>
-      </rows>
-    </grid>
+    <vbox flex="1">
+      <vbox style="margin-bottom: 8px">
+        <html:label for="babeldoctranslator-base-url">Base URL</html:label>
+        <html:input
+          id="babeldoctranslator-base-url"
+          type="url"
+          flex="1"
+          placeholder="https://api.openai.com/v1"
+        />
+      </vbox>
+      <vbox style="margin-bottom: 8px">
+        <html:label for="babeldoctranslator-api-key">API Key</html:label>
+        <html:input
+          id="babeldoctranslator-api-key"
+          type="password"
+          flex="1"
+          autocomplete="off"
+        />
+      </vbox>
+      <vbox>
+        <html:label for="babeldoctranslator-model">模型名称</html:label>
+        <html:input
+          id="babeldoctranslator-model"
+          type="text"
+          flex="1"
+          placeholder="gpt-4o-mini"
+        />
+      </vbox>
+    </vbox>
   </groupbox>
 
   <groupbox>
     <label><html:h3>语言与输出</html:h3></label>
-    <grid flex="1">
-      <columns>
-        <column flex="0" />
-        <column flex="1" />
-      </columns>
-      <rows>
-        <row align="center">
-          <html:label for="babeldoctranslator-source-language"
-            >源语言</html:label
-          >
-          <html:input
-            id="babeldoctranslator-source-language"
-            type="text"
-            flex="1"
-            placeholder="en"
-          />
-        </row>
-        <row align="center">
-          <html:label for="babeldoctranslator-target-language"
-            >导出语言</html:label
-          >
-          <html:input
-            id="babeldoctranslator-target-language"
-            type="text"
-            flex="1"
-            placeholder="zh-CN"
-          />
-        </row>
-        <row align="center">
+    <vbox flex="1">
+      <vbox style="margin-bottom: 8px">
+        <html:label for="babeldoctranslator-source-language">源语言</html:label>
+        <html:input
+          id="babeldoctranslator-source-language"
+          type="text"
+          flex="1"
+          placeholder="en"
+        />
+      </vbox>
+      <vbox style="margin-bottom: 8px">
+        <html:label for="babeldoctranslator-target-language"
+          >导出语言</html:label
+        >
+        <html:input
+          id="babeldoctranslator-target-language"
+          type="text"
+          flex="1"
+          placeholder="zh-CN"
+        />
+      </vbox>
+      <hbox flex="1" align="start">
+        <vbox flex="1" style="margin-right: 8px">
           <html:label for="babeldoctranslator-qps">请求速率</html:label>
           <html:input
             id="babeldoctranslator-qps"
@@ -98,8 +86,8 @@
             step="1"
             value="10"
           />
-        </row>
-        <row align="center">
+        </vbox>
+        <vbox flex="1">
           <html:label for="babeldoctranslator-workers">处理线程</html:label>
           <html:input
             id="babeldoctranslator-workers"
@@ -109,9 +97,9 @@
             step="1"
             value="8"
           />
-        </row>
-      </rows>
-    </grid>
+        </vbox>
+      </hbox>
+    </vbox>
     <vbox>
       <html:label>
         <html:input
@@ -136,6 +124,7 @@
 
   <hbox align="center" pack="end" style="margin-top: 10px">
     <button id="babeldoctranslator-test" label="测试连接" />
+    <spacer width="8" />
     <button id="babeldoctranslator-save" label="保存设置" />
   </hbox>
   <description id="babeldoctranslator-status" />
