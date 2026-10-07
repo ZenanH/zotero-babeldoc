@@ -98,11 +98,7 @@ export async function registerPrefsScripts(win: Window): Promise<void> {
   deployButton.addEventListener("command", async () => {
     deployButton.disabled = true;
     detectButton.disabled = true;
-    setStatus(
-      babeldocStatus,
-      "正在配置翻译环境…",
-      "neutral",
-    );
+    setStatus(babeldocStatus, "正在配置翻译环境…", "neutral");
     try {
       const installation = await deployBabelDoc();
       setStatus(

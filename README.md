@@ -26,12 +26,12 @@ Zotero 10 插件：在本机调用 BabelDOC 翻译 PDF，并把翻译结果作�
 
 插件不会在启动时自动安装运行时。用户点击设置页按钮后，插件在 `~/.babeldoc-translator/` 中配置固定版本的 uv、Python 和 BabelDOC，并在校验成功后写入活动运行时清单。当前版本 `0.1.21` 固定：
 
-| 组件 | 版本 |
-| --- | --- |
-| uv | `0.12.23` |
-| Python | `3.12.15` |
-| BabelDOC | `0.6.4` |
-| 依赖锁文件 | [`runtime/uv.lock`](runtime/uv.lock) |
+| 组件                       | 版本                                                     |
+| -------------------------- | -------------------------------------------------------- |
+| uv                         | `0.12.23`                                                |
+| Python                     | `3.12.15`                                                |
+| BabelDOC                   | `0.6.4`                                                  |
+| 依赖锁文件                 | [`runtime/uv.lock`](runtime/uv.lock)                     |
 | 部署清单（版本 + SHA-256） | [`runtime/requirements.lock`](runtime/requirements.lock) |
 
 部署目录使用独立的虚拟环境，活动任务占用的旧环境会在任务结束后再清理。用户已有的 uv、Python 或 BabelDOC 不会被插件升级或修改。

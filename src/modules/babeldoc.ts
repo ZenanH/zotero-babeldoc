@@ -66,9 +66,7 @@ async function detectBabelDocInternal(): Promise<BabelDocInstallation> {
 
   const executablePath = getBabelDocExecutablePath(manifest.environmentPath);
   if (!(await pathExists(executablePath))) {
-    throw new Error(
-      `插件专用 BabelDOC 环境不完整。请点击“配置 / 修复环境”。`,
-    );
+    throw new Error(`插件专用 BabelDOC 环境不完整。请点击“配置 / 修复环境”。`);
   }
 
   const result = await runExternalProcess(executablePath, ["--version"], {
