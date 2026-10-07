@@ -5,7 +5,6 @@ import {
   getIOUtils,
   getManagedBabelDocInstallCommand,
   getManagedBabelDocPythonPath,
-  getManagedMarkItDownPath,
   getManagedProcessEnvironment,
   getManagedRuntimeManifestPath,
   getManagedRuntimesDirectory,
@@ -17,7 +16,6 @@ import {
   pathExists,
   removeDirectory,
   REQUIRED_BABELDOC_VERSION,
-  REQUIRED_MARKITDOWN_VERSION,
   REQUIRED_PYTHON_VERSION,
   REQUIRED_UV_VERSION,
   RUNTIME_ID,
@@ -36,7 +34,6 @@ interface RuntimeManifest {
   uvVersion: string;
   pythonVersion: string;
   babeldocVersion: string;
-  markitdownVersion: string;
   environmentPath: string;
   installedAt: string;
 }
@@ -60,39 +57,17 @@ async function detectBabelDocInternal(): Promise<BabelDocInstallation> {
     manifest.runtimeId !== RUNTIME_ID ||
     manifest.uvVersion !== REQUIRED_UV_VERSION ||
     manifest.pythonVersion !== REQUIRED_PYTHON_VERSION ||
-    manifest.babeldocVersion !== REQUIRED_BABELDOC_VERSION ||
-    manifest.markitdownVersion !== REQUIRED_MARKITDOWN_VERSION
+    manifest.babeldocVersion !== REQUIRED_BABELDOC_VERSION
   ) {
     throw new Error(
-      `当前插件需要 BabelDOC ${REQUIRED_BABELDOC_VERSION}、MarkItDown ${REQUIRED_MARKITDOWN_VERSION}、uv ${REQUIRED_UV_VERSION} 和 Python ${REQUIRED_PYTHON_VERSION}。请点击“部署 / 修复 BabelDOC”。`,
+      `当前插件需要 BabelDOC ${REQUIRED_BABELDOC_VERSION}、uv ${REQUIRED_UV_VERSION} 和 Python ${REQUIRED_PYTHON_VERSION}。请点击“配置 / 修复环境”。`,
     );
   }
 
   const executablePath = getBabelDocExecutablePath(manifest.environmentPath);
-  const markitdownPath = getManagedMarkItDownPath(manifest.environmentPath);
-  if (
-    !(await pathExists(executablePath)) ||
-    !(await pathExists(markitdownPath))
-  ) {
+  if (!(await pathExists(executablePath))) {
     throw new Error(
-      `插件专用 BabelDOC 和 MarkItDown 环境不完整。请点击“部署 / 修复 BabelDOC”。`,
-    );
-  }
-
-  const markitdownResult = await runExternalProcess(
-    markitdownPath,
-    ["--version"],
-    { environment: getManagedProcessEnvironment() },
-  );
-  const markitdownVersion = parseVersion(
-    markitdownResult.stdout || markitdownResult.stderr,
-  );
-  if (
-    markitdownResult.exitCode !== 0 ||
-    markitdownVersion !== REQUIRED_MARKITDOWN_VERSION
-  ) {
-    throw new Error(
-      `插件专用 MarkItDown 版本不匹配，检测到 ${markitdownVersion || "未知版本"}，需要 ${REQUIRED_MARKITDOWN_VERSION}。请点击“部署 / 修复 BabelDOC”。`,
+      `插件专用 BabelDOC 环境不完整。请点击“配置 / 修复环境”。`,
     );
   }
 
@@ -102,7 +77,7 @@ async function detectBabelDocInternal(): Promise<BabelDocInstallation> {
   const version = parseVersion(result.stdout || result.stderr);
   if (result.exitCode !== 0 || version !== REQUIRED_BABELDOC_VERSION) {
     throw new Error(
-      `插件专用 BabelDOC 版本不匹配，检测到 ${version || "未知版本"}，需要 ${REQUIRED_BABELDOC_VERSION}。请点击“部署 / 修复 BabelDOC”。`,
+      `插件专用 BabelDOC 版本不匹配，检测到 ${version || "未知版本"}，需要 ${REQUIRED_BABELDOC_VERSION}。请点击“配置 / 修复环境”。`,
     );
   }
 
@@ -199,30 +174,11 @@ async function deployBabelDocInternal(): Promise<BabelDocInstallation> {
       );
     }
 
-    const markitdownPath = getManagedMarkItDownPath(environmentPath);
-    const markitdownResult = await runExternalProcess(
-      markitdownPath,
-      ["--version"],
-      { environment: getManagedProcessEnvironment() },
-    );
-    const markitdownVersion = parseVersion(
-      markitdownResult.stdout || markitdownResult.stderr,
-    );
-    if (
-      markitdownResult.exitCode !== 0 ||
-      markitdownVersion !== REQUIRED_MARKITDOWN_VERSION
-    ) {
-      throw new Error(
-        `部署完成后 MarkItDown 校验失败：检测到 ${markitdownVersion || "未知版本"}，需要 ${REQUIRED_MARKITDOWN_VERSION}。`,
-      );
-    }
-
     const manifest: RuntimeManifest = {
       runtimeId: RUNTIME_ID,
       uvVersion: REQUIRED_UV_VERSION,
       pythonVersion: REQUIRED_PYTHON_VERSION,
       babeldocVersion: REQUIRED_BABELDOC_VERSION,
-      markitdownVersion: REQUIRED_MARKITDOWN_VERSION,
       environmentPath,
       installedAt: new Date().toISOString(),
     };
@@ -240,7 +196,7 @@ async function deployBabelDocInternal(): Promise<BabelDocInstallation> {
   } catch (error) {
     await removeDirectory(runtimeDirectory);
     throw new Error(
-      `BabelDOC 和 MarkItDown 部署失败。${compactDiagnostic(error instanceof Error ? error.message : String(error))}`,
+      `BabelDOC 部署失败。${compactDiagnostic(error instanceof Error ? error.message : String(error))}`,
       { cause: error },
     );
   }

@@ -1,8 +1,6 @@
 import { translateSelectedPDF } from "./translation";
-import { summarizeSelectedPDF } from "./summary";
 
 const MENU_ID = "babeldoctranslator-translate-pdf";
-const SUMMARY_MENU_ID = "babeldoctranslator-summarize-pdf";
 
 export function registerMainWindowMenu(win: _ZoteroTypes.MainWindow): void {
   const menu = win.document.getElementById("zotero-itemmenu") as any;
@@ -17,15 +15,6 @@ export function registerMainWindowMenu(win: _ZoteroTypes.MainWindow): void {
     "使用 BabelDOC 翻译 PDF",
     "调用本机 BabelDOC，将翻译 PDF 添加到同一文献下",
     () => translateSelectedPDF(win),
-    () => Boolean(getSelectedPdfAttachment(win)),
-  );
-  registerMenuAction(
-    win,
-    menu,
-    SUMMARY_MENU_ID,
-    "总结论文（中文）",
-    "提取 PDF 正文并使用已配置的模型生成中文总结，保存为文献笔记",
-    () => summarizeSelectedPDF(win),
     () => Boolean(getSelectedPdfAttachment(win)),
   );
 }

@@ -1,8 +1,6 @@
 import { testConnection } from "./api";
 import {
   getSettings,
-  getUnixBabelDocInstallCommand,
-  getWindowsBabelDocInstallCommand,
   saveSettings,
   TranslatorSettings,
   validateSettings,
@@ -49,24 +47,8 @@ export async function registerPrefsScripts(win: Window): Promise<void> {
   const babeldocStatus = document.getElementById(
     "babeldoctranslator-babeldoc-status",
   ) as HTMLElement;
-  const unixInstallCommand = document.getElementById(
-    "babeldoctranslator-install-command-unix",
-  ) as HTMLElement;
-  if (unixInstallCommand) {
-    unixInstallCommand.textContent = getUnixBabelDocInstallCommand();
-  }
-  const windowsInstallCommand = document.getElementById(
-    "babeldoctranslator-install-command-windows",
-  ) as HTMLElement;
-  if (windowsInstallCommand) {
-    windowsInstallCommand.textContent = getWindowsBabelDocInstallCommand();
-  }
   setStatus(status, "配置尚未测试。", "neutral");
-  setStatus(
-    babeldocStatus,
-    "正在检测插件专用 BabelDOC 和 MarkItDown…",
-    "neutral",
-  );
+  setStatus(babeldocStatus, "正在检测翻译环境…", "neutral");
 
   const saveButton = document.getElementById(
     "babeldoctranslator-save",
@@ -104,7 +86,7 @@ export async function registerPrefsScripts(win: Window): Promise<void> {
 
   testButton.addEventListener("command", async () => {
     testButton.disabled = true;
-    setStatus(status, "正在测试 Base URL / API Key…", "neutral");
+    setStatus(status, "正在测试连接…", "neutral");
     try {
       const result = await testConnection(readForm(document));
       setStatus(status, result.message, result.ok ? "success" : "error");
@@ -118,14 +100,14 @@ export async function registerPrefsScripts(win: Window): Promise<void> {
     detectButton.disabled = true;
     setStatus(
       babeldocStatus,
-      "正在部署固定版本的 uv、Python、BabelDOC 和 MarkItDown…",
+      "正在配置翻译环境…",
       "neutral",
     );
     try {
       const installation = await deployBabelDoc();
       setStatus(
         babeldocStatus,
-        `已部署 BabelDOC ${installation.version} 和 MarkItDown：${installation.path}`,
+        `已完成 · 环境路径：${installation.runtimePath}`,
         "success",
       );
     } catch (error) {
@@ -155,12 +137,12 @@ export async function registerPrefsScripts(win: Window): Promise<void> {
 async function refreshBabelDocStatus(
   status: HTMLElement | null,
 ): Promise<void> {
-  setStatus(status, "正在检测插件专用 BabelDOC 和 MarkItDown…", "neutral");
+  setStatus(status, "正在检测翻译环境…", "neutral");
   try {
     const installation = await detectBabelDoc();
     setStatus(
       status,
-      `已检测到 BabelDOC ${installation.version} 和 MarkItDown：${installation.path}`,
+      `已完成 · 环境路径：${installation.runtimePath}`,
       "success",
     );
   } catch (error) {

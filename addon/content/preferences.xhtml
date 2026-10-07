@@ -1,156 +1,69 @@
+<?xml version="1.0"?>
+<!DOCTYPE window>
 <groupbox
   id="babeldoctranslator-preferences"
+  xmlns:html="http://www.w3.org/1999/xhtml"
   onload="Zotero.BabelDocTranslator.hooks.onPrefsEvent('load', { window })"
 >
+  <html:style>
+    #babeldoctranslator-preferences { padding: 18px; }
+    #babeldoctranslator-preferences h2 { margin: 0 0 4px; font-size: 20px; }
+    #babeldoctranslator-preferences h3 { margin: 0 0 8px; font-size: 14px; }
+    #babeldoctranslator-preferences groupbox { margin: 0 0 14px; padding: 12px; }
+    #babeldoctranslator-preferences grid { margin-top: 4px; }
+    #babeldoctranslator-preferences row { margin: 5px 0; }
+    #babeldoctranslator-preferences html|label { min-width: 92px; }
+    #babeldoctranslator-preferences html|input { min-height: 25px; }
+    #babeldoctranslator-babeldoc-status, #babeldoctranslator-status { margin-top: 8px; }
+    #babeldoctranslator-babeldoc-status[data-status="success"], #babeldoctranslator-status[data-status="success"] { color: #238636; }
+    #babeldoctranslator-babeldoc-status[data-status="error"], #babeldoctranslator-status[data-status="error"] { color: #c62828; }
+  </html:style>
+
   <label><html:h2>Zotero BabelDOC</html:h2></label>
+  <description>把 Zotero 中的 PDF 翻译成你设置的目标语言，并将结果保存为同一文献的子附件。</description>
 
   <groupbox>
-    <label><html:h3>安装环境</html:h3></label>
-    <description>
-      插件不会自动安装。点击“部署 / 修复 BabelDOC”后，插件会检测或配置固定版本的
-      uv，并在插件专用、与系统环境隔离的目录中一并安装固定版本的
-      BabelDOC、Microsoft MarkItDown
-      及其锁定依赖。翻译和论文总结都只使用这套由插件管理的环境：
-    </description>
-    <html:h4 style="margin-bottom: 0">macOS / Linux</html:h4>
-    <description id="babeldoctranslator-install-command-unix" />
-    <html:h4 style="margin-bottom: 0">Windows PowerShell</html:h4>
-    <description id="babeldoctranslator-install-command-windows" />
+    <label><html:h3>翻译环境</html:h3></label>
     <description id="babeldoctranslator-babeldoc-status" />
-    <hbox align="center" style="margin-top: 8px">
-      <button id="babeldoctranslator-deploy" label="部署 / 修复 BabelDOC" />
-      <button id="babeldoctranslator-detect" label="检测 BabelDOC" />
+    <hbox align="center" style="margin-top: 10px">
+      <button id="babeldoctranslator-deploy" label="配置 / 修复环境" />
+      <button id="babeldoctranslator-detect" label="检查环境" />
     </hbox>
   </groupbox>
 
   <groupbox>
-    <label><html:h3>API 配置</html:h3></label>
-    <description>
-      “总结论文（中文）”会在本机用 MarkItDown 将 PDF 转为临时 Markdown，再将
-      Markdown 发送到这里配置的模型 API；PDF、Markdown
-      临时文件和中间产物不会上传， 总结结束后会清理，API 调用可能产生费用。
-    </description>
+    <label><html:h3>模型连接</html:h3></label>
+    <description>填写兼容 OpenAI 接口的 Base URL、API Key 和模型名称。</description>
     <grid flex="1">
-      <columns>
-        <column flex="0" />
-        <column flex="1" />
-      </columns>
+      <columns><column flex="0" /><column flex="1" /></columns>
       <rows>
-        <row align="center">
-          <html:label for="babeldoctranslator-base-url">Base URL</html:label>
-          <html:input
-            id="babeldoctranslator-base-url"
-            type="url"
-            flex="1"
-            placeholder="https://api.openai.com/v1"
-          />
-        </row>
-        <row align="center">
-          <html:label for="babeldoctranslator-api-key">API Key</html:label>
-          <html:input
-            id="babeldoctranslator-api-key"
-            type="password"
-            flex="1"
-            autocomplete="off"
-          />
-        </row>
-        <row align="center">
-          <html:label for="babeldoctranslator-model">模型</html:label>
-          <html:input
-            id="babeldoctranslator-model"
-            type="text"
-            flex="1"
-            placeholder="gpt-4o-mini"
-          />
-        </row>
+        <row align="center"><html:label for="babeldoctranslator-base-url">Base URL</html:label><html:input id="babeldoctranslator-base-url" type="url" flex="1" placeholder="https://api.openai.com/v1" /></row>
+        <row align="center"><html:label for="babeldoctranslator-api-key">API Key</html:label><html:input id="babeldoctranslator-api-key" type="password" flex="1" autocomplete="off" /></row>
+        <row align="center"><html:label for="babeldoctranslator-model">模型名称</html:label><html:input id="babeldoctranslator-model" type="text" flex="1" placeholder="gpt-4o-mini" /></row>
       </rows>
     </grid>
   </groupbox>
 
   <groupbox>
-    <label><html:h3>翻译参数</html:h3></label>
+    <label><html:h3>语言与输出</html:h3></label>
     <grid flex="1">
-      <columns>
-        <column flex="0" />
-        <column flex="1" />
-      </columns>
+      <columns><column flex="0" /><column flex="1" /></columns>
       <rows>
-        <row align="center">
-          <html:label for="babeldoctranslator-source-language"
-            >源语言</html:label
-          >
-          <html:input
-            id="babeldoctranslator-source-language"
-            type="text"
-            flex="1"
-            placeholder="en"
-          />
-        </row>
-        <row align="center">
-          <html:label for="babeldoctranslator-target-language"
-            >目标语言</html:label
-          >
-          <html:input
-            id="babeldoctranslator-target-language"
-            type="text"
-            flex="1"
-            placeholder="zh-CN"
-            title="中文可填写 zh、zh-CN 或中文；插件会统一使用简体中文代码 zh-CN"
-          />
-        </row>
-        <row align="center">
-          <html:label for="babeldoctranslator-qps">并发请求数</html:label>
-          <html:input
-            id="babeldoctranslator-qps"
-            type="number"
-            min="1"
-            max="64"
-            step="1"
-            value="10"
-          />
-        </row>
-        <row align="center">
-          <html:label for="babeldoctranslator-workers">处理线程数</html:label>
-          <html:input
-            id="babeldoctranslator-workers"
-            type="number"
-            min="1"
-            max="64"
-            step="1"
-            value="8"
-          />
-        </row>
+        <row align="center"><html:label for="babeldoctranslator-source-language">源语言</html:label><html:input id="babeldoctranslator-source-language" type="text" flex="1" placeholder="en" /></row>
+        <row align="center"><html:label for="babeldoctranslator-target-language">导出语言</html:label><html:input id="babeldoctranslator-target-language" type="text" flex="1" placeholder="zh-CN" /></row>
+        <row align="center"><html:label for="babeldoctranslator-qps">请求速率</html:label><html:input id="babeldoctranslator-qps" type="number" min="1" max="64" step="1" value="10" /></row>
+        <row align="center"><html:label for="babeldoctranslator-workers">处理线程</html:label><html:input id="babeldoctranslator-workers" type="number" min="1" max="64" step="1" value="8" /></row>
       </rows>
     </grid>
-  </groupbox>
-
-  <groupbox>
-    <label><html:h3>翻译结果</html:h3></label>
-    <vbox>
-      <html:label>
-        <html:input
-          id="babeldoctranslator-output-mono"
-          type="radio"
-          name="babeldoctranslator-output-mode"
-          value="mono"
-        />
-        仅中文翻译 PDF
-      </html:label>
-      <html:label>
-        <html:input
-          id="babeldoctranslator-output-dual"
-          type="radio"
-          name="babeldoctranslator-output-mode"
-          value="dual"
-        />
-        原文 + 中文（左右分页）
-      </html:label>
+    <vbox style="margin-top: 10px">
+      <html:label><html:input id="babeldoctranslator-output-mono" type="radio" name="babeldoctranslator-output-mode" value="mono" /> 仅导出翻译 PDF</html:label>
+      <html:label><html:input id="babeldoctranslator-output-dual" type="radio" name="babeldoctranslator-output-mode" value="dual" /> 导出原文 + 译文 PDF</html:label>
     </vbox>
   </groupbox>
 
-  <hbox align="center" pack="end" style="margin-top: 10px">
-    <button id="babeldoctranslator-test" label="测试服务器连接" />
-    <button id="babeldoctranslator-save" label="保存配置" />
+  <hbox align="center" pack="end" style="margin-top: 4px">
+    <button id="babeldoctranslator-test" label="测试连接" />
+    <button id="babeldoctranslator-save" label="保存设置" />
   </hbox>
   <description id="babeldoctranslator-status" />
 </groupbox>

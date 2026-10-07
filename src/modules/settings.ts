@@ -1,7 +1,6 @@
 import { config } from "../../package.json";
 
 export const REQUIRED_BABELDOC_VERSION = config.babeldocVersion;
-export const REQUIRED_MARKITDOWN_VERSION = config.markitdownVersion;
 export const REQUIRED_UV_VERSION = config.uvVersion;
 export const REQUIRED_PYTHON_VERSION = config.pythonVersion;
 export const RUNTIME_ID = config.runtimeId;
@@ -156,24 +155,8 @@ export function getManagedBabelDocPythonPath(venvPath: string): string {
   return joinPath(venvPath, executableDirectory, executable);
 }
 
-export function getManagedMarkItDownPath(venvPath: string): string {
-  const executableDirectory =
-    Services.appinfo.OS === "WINNT" ? "Scripts" : "bin";
-  const executable =
-    Services.appinfo.OS === "WINNT" ? "markitdown.exe" : "markitdown";
-  return joinPath(venvPath, executableDirectory, executable);
-}
-
 export function getManagedBabelDocInstallCommand(): string {
-  return "请在 Zotero 设置页点击“部署 / 修复 BabelDOC”，插件会一并配置 MarkItDown。";
-}
-
-export function getUnixBabelDocInstallCommand(): string {
-  return `点击上方按钮后，插件会自动配置 uv ${REQUIRED_UV_VERSION}，并在插件专用环境中安装 BabelDOC ${REQUIRED_BABELDOC_VERSION} 和 MarkItDown ${REQUIRED_MARKITDOWN_VERSION}。`;
-}
-
-export function getWindowsBabelDocInstallCommand(): string {
-  return `点击上方按钮后，插件会自动配置 uv ${REQUIRED_UV_VERSION}，并在插件专用环境中安装 BabelDOC ${REQUIRED_BABELDOC_VERSION} 和 MarkItDown ${REQUIRED_MARKITDOWN_VERSION}。`;
+  return "请在 Zotero 设置页点击“配置 / 修复环境”。";
 }
 
 export function validateSettings(settings: TranslatorSettings): void {

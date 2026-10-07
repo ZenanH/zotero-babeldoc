@@ -59,11 +59,3 @@ jobs:
       - name: Verify BabelDOC version on Windows
         if: runner.os == 'Windows'
         run: .venv/Scripts/babeldoc.exe --version
-
-      - name: Verify MarkItDown version on Unix
-        if: runner.os != 'Windows'
-        run: .venv/bin/markitdown --version
-
-      - name: Verify MarkItDown version on Windows
-        if: runner.os == 'Windows'
-        run: .venv/Scripts/markitdown.exe --version
