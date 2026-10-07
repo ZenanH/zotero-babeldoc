@@ -146,6 +146,16 @@ export async function translateSelectedPDF(win: Window): Promise<void> {
       );
     }
 
+    updateTranslationTask(attachment.id, "验证翻译结果");
+    await validateTranslationResult(
+      inputPath,
+      targetLanguage,
+      workingDirectory,
+      result.stdout,
+      result.stderr,
+      settings,
+    );
+
     updateTranslationTask(attachment.id, "导入 Zotero 子附件");
     const parentItem = (await Zotero.Items.getAsync(parentID)) as any;
     const parentTitle = parentItem?.getField("title") || getFileStem(inputPath);
@@ -340,6 +350,241 @@ async function findTranslatedPDF(
   } catch {
     return null;
   }
+}
+
+interface TranslationTrackingParagraph {
+  input?: unknown;
+  output?: unknown;
+  llm_translate_trackers?: unknown;
+}
+
+interface TranslationTrackingLLMCall {
+  has_error?: unknown;
+  error_message?: unknown;
+  fallback_to_translate?: unknown;
+}
+
+async function validateTranslationResult(
+  inputPath: string,
+  targetLanguage: string,
+  workingDirectory: string,
+  stdout: string,
+  stderr: string,
+  settings: ReturnType<typeof getSettings>,
+): Promise<void> {
+  const trackingPath = joinPath(
+    workingDirectory,
+    getFileStem(inputPath),
+    "translate_tracking.json",
+  );
+  if (!(await pathExists(trackingPath))) {
+    throw new Error(
+      "BabelDOC 未生成翻译记录，无法确认模型返回已被应用。已阻止导入结果 PDF。",
+    );
+  }
+
+  let tracking: unknown;
+  try {
+    tracking = JSON.parse(await getIOUtils().readUTF8(trackingPath));
+  } catch (error) {
+    const details = error instanceof Error ? error.message : String(error);
+    throw new Error(
+      `BabelDOC 翻译记录无法读取，已阻止导入结果 PDF。${compactProgressError(details)}`,
+      { cause: error },
+    );
+  }
+
+  const paragraphs: TranslationTrackingParagraph[] = [];
+  collectTranslationTrackingParagraphs(tracking, paragraphs);
+  if (paragraphs.length === 0) {
+    throw new Error(
+      "BabelDOC 没有记录任何可验证的翻译段落，已阻止导入结果 PDF。",
+    );
+  }
+
+  const failedCalls = collectFailedTranslationCalls(paragraphs, settings);
+  const processFailure = findBabelDocFailureDiagnostic(
+    `${stderr}\n${stdout}`,
+    settings,
+  );
+  if (failedCalls.length > 0 || processFailure) {
+    const details = failedCalls.slice(0, 3).join("；") || processFailure;
+    const suffix =
+      failedCalls.length > 3 ? `（另有 ${failedCalls.length - 3} 项）` : "";
+    throw new Error(
+      `模型翻译返回错误或未符合 BabelDOC 格式，已阻止导入结果 PDF。${details ? ` ${details}` : ""}${suffix}`,
+    );
+  }
+
+  const inputs = paragraphs.map((paragraph) =>
+    getTrackingText(paragraph.input),
+  );
+  const outputs = paragraphs.map((paragraph) =>
+    getTrackingText(paragraph.output),
+  );
+  const missingOutputCount = outputs.filter((output, index) => {
+    return inputs[index].trim().length > 0 && output.trim().length === 0;
+  }).length;
+  if (missingOutputCount > 0) {
+    throw new Error(
+      `BabelDOC 有 ${missingOutputCount} 个翻译段落没有返回内容，已阻止导入结果 PDF。`,
+    );
+  }
+
+  const sourceText = inputs.join(" ");
+  const translatedText = outputs.join(" ");
+  if (
+    sourceText.trim().length > 0 &&
+    normalizeForComparison(sourceText) ===
+      normalizeForComparison(translatedText)
+  ) {
+    throw new Error(
+      "BabelDOC 返回的翻译文本与原文完全相同，已阻止导入英文 PDF。",
+    );
+  }
+
+  const signal = getTargetLanguageSignal(targetLanguage);
+  if (!signal) return;
+
+  const sourceLetterCount = countSourceLetters(sourceText, targetLanguage);
+  const targetSignalCount = countMatches(translatedText, signal.pattern);
+  const requiredSignals = Math.max(
+    signal.minimumSignals,
+    Math.floor(sourceLetterCount * 0.1),
+  );
+  if (sourceLetterCount > 0 && targetSignalCount < requiredSignals) {
+    throw new Error(
+      `BabelDOC 返回的内容疑似仍为原文：目标语言 ${targetLanguage} 检测到 ${targetSignalCount} 个目标文字，至少需要 ${requiredSignals} 个。已阻止导入英文 PDF。`,
+    );
+  }
+}
+
+function collectTranslationTrackingParagraphs(
+  value: unknown,
+  paragraphs: TranslationTrackingParagraph[],
+): void {
+  if (!value || typeof value !== "object") return;
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      collectTranslationTrackingParagraphs(item, paragraphs);
+    }
+    return;
+  }
+
+  const object = value as Record<string, unknown>;
+  if (
+    Object.prototype.hasOwnProperty.call(object, "input") &&
+    Object.prototype.hasOwnProperty.call(object, "output") &&
+    Object.prototype.hasOwnProperty.call(object, "llm_translate_trackers")
+  ) {
+    paragraphs.push(object as TranslationTrackingParagraph);
+  }
+  for (const child of Object.values(object)) {
+    collectTranslationTrackingParagraphs(child, paragraphs);
+  }
+}
+
+function collectFailedTranslationCalls(
+  paragraphs: TranslationTrackingParagraph[],
+  settings: ReturnType<typeof getSettings>,
+): string[] {
+  const failures: string[] = [];
+  for (const paragraph of paragraphs) {
+    if (!Array.isArray(paragraph.llm_translate_trackers)) continue;
+    for (const value of paragraph.llm_translate_trackers) {
+      if (!value || typeof value !== "object") continue;
+      const tracker = value as TranslationTrackingLLMCall;
+      if (tracker.has_error === true) {
+        const message = getTrackingText(tracker.error_message);
+        failures.push(
+          message
+            ? redactDiagnostic(message, settings)
+            : "模型返回被 BabelDOC 判定为无效",
+        );
+      } else if (tracker.fallback_to_translate === true) {
+        failures.push("模型返回触发了 BabelDOC 回退翻译");
+      }
+    }
+  }
+  return [...new Set(failures)];
+}
+
+function findBabelDocFailureDiagnostic(
+  output: string,
+  settings: ReturnType<typeof getSettings>,
+): string {
+  const patterns = [
+    /Error translating paragraph/i,
+    /Translation results length mismatch/i,
+    /APIConnectionError/i,
+    /AuthenticationError/i,
+    /BadRequestError/i,
+    /RateLimitError/i,
+    /JSONDecodeError/i,
+    /translate error:/i,
+  ];
+  if (!patterns.some((pattern) => pattern.test(output))) return "";
+  return redactDiagnostic(output, settings);
+}
+
+function getTrackingText(value: unknown): string {
+  return typeof value === "string" ? value : "";
+}
+
+function getTargetLanguageSignal(
+  targetLanguage: string,
+): { pattern: RegExp; minimumSignals: number } | null {
+  const normalized = targetLanguage.toLowerCase().replaceAll("_", "-");
+  if (
+    normalized === "zh" ||
+    normalized === "zh-cn" ||
+    normalized === "zh-hans"
+  ) {
+    return { pattern: /[\u3400-\u9fff]/g, minimumSignals: 8 };
+  }
+  if (normalized === "ja" || normalized === "ja-jp") {
+    return {
+      pattern: /[\u3040-\u30ff\u3400-\u9fff]/g,
+      minimumSignals: 8,
+    };
+  }
+  if (normalized === "ko" || normalized === "ko-kr") {
+    return { pattern: /[\uac00-\ud7af]/g, minimumSignals: 8 };
+  }
+  if (["ru", "uk", "bg", "sr"].includes(normalized)) {
+    return { pattern: /[\u0400-\u04ff]/g, minimumSignals: 8 };
+  }
+  return null;
+}
+
+function countMatches(text: string, pattern: RegExp): number {
+  return text.match(pattern)?.length || 0;
+}
+
+function countSourceLetters(text: string, targetLanguage: string): number {
+  const normalized = targetLanguage.toLowerCase().replaceAll("_", "-");
+  if (
+    normalized === "zh" ||
+    normalized === "zh-cn" ||
+    normalized === "zh-hans" ||
+    normalized === "ja" ||
+    normalized === "ja-jp" ||
+    normalized === "ko" ||
+    normalized === "ko-kr"
+  ) {
+    return countMatches(text, /[A-Za-z]/g);
+  }
+  if (["ru", "uk", "bg", "sr"].includes(normalized)) {
+    return countMatches(text, /[A-Za-z\u0400-\u04ff]/g);
+  }
+  return countMatches(text, /\p{L}/gu);
+}
+
+function normalizeForComparison(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[\s\p{P}\p{S}]+/gu, "")
+    .trim();
 }
 
 function redactDiagnostic(
