@@ -3,6 +3,7 @@ import {
   getSettings,
   saveSettings,
   TranslatorSettings,
+  validateBaseUrl,
   validateSettings,
   writeManagedConfig,
 } from "./settings";
@@ -56,6 +57,9 @@ export async function registerPrefsScripts(win: Window): Promise<void> {
   const testButton = document.getElementById(
     "babeldoctranslator-test",
   ) as HTMLButtonElement;
+  const baseUrlInput = document.getElementById(
+    "babeldoctranslator-base-url",
+  ) as HTMLInputElement;
   const deployButton = document.getElementById(
     "babeldoctranslator-deploy",
   ) as HTMLButtonElement;
@@ -67,6 +71,19 @@ export async function registerPrefsScripts(win: Window): Promise<void> {
     return;
   }
   saveButton.dataset.bound = "true";
+
+  baseUrlInput.addEventListener("blur", () => {
+    try {
+      validateBaseUrl(baseUrlInput.value.trim());
+      setStatus(status, "Base URL 格式已检查；可点击“测试连接”。", "neutral");
+    } catch (error) {
+      setStatus(
+        status,
+        error instanceof Error ? error.message : String(error),
+        "error",
+      );
+    }
+  });
 
   saveButton.addEventListener("command", async () => {
     try {
@@ -89,7 +106,11 @@ export async function registerPrefsScripts(win: Window): Promise<void> {
     setStatus(status, "正在测试连接…", "neutral");
     try {
       const result = await testConnection(readForm(document));
-      setStatus(status, result.message, result.ok ? "success" : "error");
+      setStatus(
+        status,
+        result.message,
+        result.warning ? "error" : result.ok ? "success" : "error",
+      );
     } finally {
       testButton.disabled = false;
     }

@@ -151,9 +151,6 @@ export async function translateSelectedPDF(win: Window): Promise<void> {
       inputPath,
       targetLanguage,
       workingDirectory,
-      result.stdout,
-      result.stderr,
-      settings,
     );
 
     updateTranslationTask(attachment.id, "导入 Zotero 子附件");
@@ -358,19 +355,10 @@ interface TranslationTrackingParagraph {
   llm_translate_trackers?: unknown;
 }
 
-interface TranslationTrackingLLMCall {
-  has_error?: unknown;
-  error_message?: unknown;
-  fallback_to_translate?: unknown;
-}
-
 async function validateTranslationResult(
   inputPath: string,
   targetLanguage: string,
   workingDirectory: string,
-  stdout: string,
-  stderr: string,
-  settings: ReturnType<typeof getSettings>,
 ): Promise<void> {
   const trackingPath = joinPath(
     workingDirectory,
@@ -399,20 +387,6 @@ async function validateTranslationResult(
   if (paragraphs.length === 0) {
     throw new Error(
       "BabelDOC 没有记录任何可验证的翻译段落，已阻止导入结果 PDF。",
-    );
-  }
-
-  const failedCalls = collectFailedTranslationCalls(paragraphs, settings);
-  const processFailure = findBabelDocFailureDiagnostic(
-    `${stderr}\n${stdout}`,
-    settings,
-  );
-  if (failedCalls.length > 0 || processFailure) {
-    const details = failedCalls.slice(0, 3).join("；") || processFailure;
-    const suffix =
-      failedCalls.length > 3 ? `（另有 ${failedCalls.length - 3} 项）` : "";
-    throw new Error(
-      `模型翻译返回错误或未符合 BabelDOC 格式，已阻止导入结果 PDF。${details ? ` ${details}` : ""}${suffix}`,
     );
   }
 
@@ -482,49 +456,6 @@ function collectTranslationTrackingParagraphs(
   for (const child of Object.values(object)) {
     collectTranslationTrackingParagraphs(child, paragraphs);
   }
-}
-
-function collectFailedTranslationCalls(
-  paragraphs: TranslationTrackingParagraph[],
-  settings: ReturnType<typeof getSettings>,
-): string[] {
-  const failures: string[] = [];
-  for (const paragraph of paragraphs) {
-    if (!Array.isArray(paragraph.llm_translate_trackers)) continue;
-    for (const value of paragraph.llm_translate_trackers) {
-      if (!value || typeof value !== "object") continue;
-      const tracker = value as TranslationTrackingLLMCall;
-      if (tracker.has_error === true) {
-        const message = getTrackingText(tracker.error_message);
-        failures.push(
-          message
-            ? redactDiagnostic(message, settings)
-            : "模型返回被 BabelDOC 判定为无效",
-        );
-      } else if (tracker.fallback_to_translate === true) {
-        failures.push("模型返回触发了 BabelDOC 回退翻译");
-      }
-    }
-  }
-  return [...new Set(failures)];
-}
-
-function findBabelDocFailureDiagnostic(
-  output: string,
-  settings: ReturnType<typeof getSettings>,
-): string {
-  const patterns = [
-    /Error translating paragraph/i,
-    /Translation results length mismatch/i,
-    /APIConnectionError/i,
-    /AuthenticationError/i,
-    /BadRequestError/i,
-    /RateLimitError/i,
-    /JSONDecodeError/i,
-    /translate error:/i,
-  ];
-  if (!patterns.some((pattern) => pattern.test(output))) return "";
-  return redactDiagnostic(output, settings);
 }
 
 function getTrackingText(value: unknown): string {

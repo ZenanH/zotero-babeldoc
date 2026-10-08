@@ -2,6 +2,7 @@ import { TranslatorSettings, validateBaseUrl } from "./settings";
 
 export interface ConnectionTestResult {
   ok: boolean;
+  warning?: boolean;
   message: string;
 }
 
@@ -21,7 +22,11 @@ export async function testConnection(
     const status = Number(response.status || 0);
     return {
       ok: true,
-      message: `连接成功（HTTP ${status}）。`,
+      warning: status === 404,
+      message:
+        status === 404
+          ? "服务已响应（HTTP 404），但 /models 不存在；请检查 Base URL 是否需要 /v1。"
+          : `服务已响应（HTTP ${status}）。此测试仅检查 /models 是否收到响应。`,
     };
   } catch (error) {
     return {

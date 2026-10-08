@@ -185,6 +185,9 @@ export function validateBaseUrl(baseUrl: string): void {
   if (url.protocol !== "http:" && url.protocol !== "https:") {
     throw new Error("Base URL 只支持 http 或 https。");
   }
+  if (url.pathname === "/") {
+    throw new Error("Base URL 缺少 API 路径；通常需要在域名后加 /v1。");
+  }
 }
 
 export function getPathUtils(): any {
@@ -302,6 +305,7 @@ export function renderBabelDocToml(settings: TranslatorSettings): string {
     'openai-reasoning = "none"',
     `openai-base-url = ${tomlString(settings.baseUrl.replace(/\/+$/, ""))}`,
     `openai-api-key = ${tomlString(settings.apiKey)}`,
+    `no-send-temperature = ${/^(?:gpt-(?:[5-9]|\d{2,})(?:[.-]|$)|o[1-9](?:[.-]|$))/i.test(settings.model)}`,
     `custom-system-prompt = ${tomlString(customSystemPrompt)}`,
     "ignore-cache = true",
     "enable-json-mode-if-requested = false",
