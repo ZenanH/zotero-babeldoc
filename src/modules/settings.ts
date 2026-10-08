@@ -299,6 +299,7 @@ export function renderBabelDocToml(settings: TranslatorSettings): string {
     `watermark-output-mode = ${tomlString(settings.watermarkOutputMode)}`,
     "openai = true",
     `openai-model = ${tomlString(settings.model)}`,
+    'openai-reasoning = "none"',
     `openai-base-url = ${tomlString(settings.baseUrl.replace(/\/+$/, ""))}`,
     `openai-api-key = ${tomlString(settings.apiKey)}`,
     `custom-system-prompt = ${tomlString(customSystemPrompt)}`,
