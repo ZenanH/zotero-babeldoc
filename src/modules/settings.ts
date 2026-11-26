@@ -6,6 +6,7 @@ export const REQUIRED_PYTHON_VERSION = config.pythonVersion;
 export const RUNTIME_ID = config.runtimeId;
 
 export type TranslationOutputMode = "mono" | "dual";
+export type ReasoningEffort = "low" | "medium" | "high" | "xhigh" | "max";
 
 const CHINESE_LANGUAGE_ALIASES = new Set([
   "zh",
@@ -22,6 +23,7 @@ export interface TranslatorSettings {
   baseUrl: string;
   apiKey: string;
   model: string;
+  reasoningEffort: ReasoningEffort;
   sourceLanguage: string;
   targetLanguage: string;
   qps: number;
@@ -34,6 +36,7 @@ export const DEFAULT_SETTINGS: TranslatorSettings = {
   baseUrl: "https://api.openai.com/v1",
   apiKey: "",
   model: "gpt-4o-mini",
+  reasoningEffort: "low",
   sourceLanguage: "en",
   targetLanguage: "zh-CN",
   qps: 10,
@@ -72,6 +75,9 @@ export function getSettings(): TranslatorSettings {
     baseUrl: getPref("base-url", DEFAULT_SETTINGS.baseUrl).trim(),
     apiKey: getPref("api-key", DEFAULT_SETTINGS.apiKey).trim(),
     model: getPref("model", DEFAULT_SETTINGS.model).trim(),
+    reasoningEffort: normalizeReasoningEffort(
+      getPref("reasoning-effort", DEFAULT_SETTINGS.reasoningEffort),
+    ),
     sourceLanguage: normalizeBabelDocLanguage(
       getPref("source-language", DEFAULT_SETTINGS.sourceLanguage),
     ),
@@ -96,6 +102,10 @@ export function saveSettings(settings: TranslatorSettings): void {
   setPref("base-url", settings.baseUrl.trim());
   setPref("api-key", settings.apiKey.trim());
   setPref("model", settings.model.trim());
+  setPref(
+    "reasoning-effort",
+    normalizeReasoningEffort(settings.reasoningEffort),
+  );
   setPref(
     "source-language",
     normalizeBabelDocLanguage(settings.sourceLanguage),
@@ -302,7 +312,7 @@ export function renderBabelDocToml(settings: TranslatorSettings): string {
     `watermark-output-mode = ${tomlString(settings.watermarkOutputMode)}`,
     "openai = true",
     `openai-model = ${tomlString(settings.model)}`,
-    'openai-reasoning = "none"',
+    `openai-reasoning = ${tomlString(normalizeReasoningEffort(settings.reasoningEffort))}`,
     `openai-base-url = ${tomlString(settings.baseUrl.replace(/\/+$/, ""))}`,
     `openai-api-key = ${tomlString(settings.apiKey)}`,
     `no-send-temperature = ${/^(?:gpt-(?:[5-9]|\d{2,})(?:[.-]|$)|o[1-9](?:[.-]|$))/i.test(settings.model)}`,
@@ -316,6 +326,19 @@ export function renderBabelDocToml(settings: TranslatorSettings): string {
     "report-interval = 0.5",
     "",
   ].join("\n");
+}
+
+function normalizeReasoningEffort(value: string): ReasoningEffort {
+  const supportedEfforts: ReasoningEffort[] = [
+    "low",
+    "medium",
+    "high",
+    "xhigh",
+    "max",
+  ];
+  return supportedEfforts.includes(value as ReasoningEffort)
+    ? (value as ReasoningEffort)
+    : DEFAULT_SETTINGS.reasoningEffort;
 }
 
 export async function ensureDirectory(path: string): Promise<void> {

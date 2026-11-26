@@ -10,6 +10,7 @@ declare namespace _ZoteroTypes {
       "base-url": string;
       "api-key": string;
       "model": string;
+      "reasoning-effort": string;
       "source-language": string;
       "target-language": string;
       "qps": number;

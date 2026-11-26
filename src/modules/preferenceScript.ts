@@ -17,6 +17,11 @@ export async function registerPrefsScripts(win: Window): Promise<void> {
   setValue(document, "babeldoctranslator-model", settings.model);
   setValue(
     document,
+    "babeldoctranslator-reasoning-effort",
+    settings.reasoningEffort,
+  );
+  setValue(
+    document,
     "babeldoctranslator-source-language",
     settings.sourceLanguage,
   );
@@ -177,6 +182,10 @@ function readForm(document: Document): TranslatorSettings {
     baseUrl: getValue(document, "babeldoctranslator-base-url"),
     apiKey: getValue(document, "babeldoctranslator-api-key"),
     model: getValue(document, "babeldoctranslator-model"),
+    reasoningEffort: getValue(
+      document,
+      "babeldoctranslator-reasoning-effort",
+    ) as TranslatorSettings["reasoningEffort"],
     sourceLanguage: getValue(document, "babeldoctranslator-source-language"),
     targetLanguage: getValue(document, "babeldoctranslator-target-language"),
     qps: Number(getValue(document, "babeldoctranslator-qps")),

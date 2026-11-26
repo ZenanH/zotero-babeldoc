@@ -1,6 +1,7 @@
 pref("base-url", "https://api.openai.com/v1");
 pref("api-key", "");
 pref("model", "gpt-4o-mini");
+pref("reasoning-effort", "low");
 pref("source-language", "en");
 pref("target-language", "zh-CN");
 pref("qps", 10);

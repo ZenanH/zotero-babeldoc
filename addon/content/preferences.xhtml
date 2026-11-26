@@ -11,8 +11,11 @@
     <description id="babeldoctranslator-babeldoc-status" />
     <hbox align="center" style="margin-top: 8px">
       <button id="babeldoctranslator-deploy" label="配置 / 修复环境" />
-      <spacer width="8" />
-      <button id="babeldoctranslator-detect" label="检查环境" />
+      <button
+        id="babeldoctranslator-detect"
+        label="检查环境"
+        style="margin-left: 10px"
+      />
     </hbox>
   </groupbox>
 
@@ -52,6 +55,19 @@
           flex="1"
           placeholder="gpt-4o-mini"
         />
+      </vbox>
+      <vbox style="margin-top: 8px">
+        <html:label for="babeldoctranslator-reasoning-effort"
+          >推理强度</html:label
+        >
+        <html:select id="babeldoctranslator-reasoning-effort" flex="1">
+          <html:option value="low">low（默认）</html:option>
+          <html:option value="medium">medium</html:option>
+          <html:option value="high">high</html:option>
+          <html:option value="xhigh">xhigh</html:option>
+          <html:option value="max">max</html:option>
+        </html:select>
+        <description>按模型服务商支持的推理强度选择。</description>
       </vbox>
     </vbox>
   </groupbox>
@@ -128,8 +144,11 @@
 
   <hbox align="center" pack="end" style="margin-top: 10px">
     <button id="babeldoctranslator-test" label="测试连接" />
-    <spacer width="8" />
-    <button id="babeldoctranslator-save" label="保存设置" />
+    <button
+      id="babeldoctranslator-save"
+      label="保存设置"
+      style="margin-left: 10px"
+    />
   </hbox>
   <description id="babeldoctranslator-status" />
 </groupbox>
