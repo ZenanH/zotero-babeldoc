@@ -8,7 +8,7 @@ modifies a user's unrelated BabelDOC installation.
 
 ## Pinned runtime
 
-- Plugin version: `0.1.27`
+- Plugin version: `0.1.28`
 - Zotero: `10.*`
 - Node.js CI: `22`
 - pnpm CI: `11`
@@ -38,11 +38,13 @@ installations are never modified.
 ## Deployment behavior
 
 Startup and translation only detect the active runtime. Installation happens
-only from the Preferences pane after the user clicks the deployment button.
-Deployment uses the embedded hash-locked requirements, validates the exact
-BabelDOC version, writes the active manifest only after validation succeeds,
-and then removes unused old runtimes. A runtime held by an active translation
-task is retained until that task releases it.
+only from the Preferences pane after the user clicks the clean-and-deploy
+button. Deployment waits for active translation tasks, clears the plugin-managed
+root and its caches, then installs from the embedded hash-locked requirements.
+It validates the exact BabelDOC version and writes the active manifest only
+after validation succeeds. Failed deployments leave the plugin-managed root
+clean. The configured runtime is not removed while a translation task is using
+it.
 
 ## Updating the runtime
 

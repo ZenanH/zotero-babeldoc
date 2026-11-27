@@ -1,12 +1,12 @@
 import { EMBEDDED_REQUIREMENTS_LOCK } from "./runtimeLock";
 import {
   ensureDirectory,
-  getHomeDirectory,
   getIOUtils,
   getManagedBabelDocInstallCommand,
   getManagedBabelDocPythonPath,
   getManagedProcessEnvironment,
   getManagedRuntimeManifestPath,
+  getManagedRuntimeRoot,
   getManagedRuntimesDirectory,
   getManagedPythonDirectory,
   getManagedUvDirectory,
@@ -40,10 +40,24 @@ interface RuntimeManifest {
 
 let deploymentPromise: Promise<BabelDocInstallation> | null = null;
 const activeRuntimeUsers = new Map<string, number>();
+const runtimeReleaseWaiters = new Set<() => void>();
 let runtimeOperationTail: Promise<void> = Promise.resolve();
 
 export async function detectBabelDoc(): Promise<BabelDocInstallation> {
   return withRuntimeOperationLock(detectBabelDocInternal);
+}
+
+export async function detectAndAcquireBabelDocRuntime(): Promise<{
+  installation: BabelDocInstallation;
+  release: () => void;
+}> {
+  return withRuntimeOperationLock(async () => {
+    const installation = await detectBabelDocInternal();
+    return {
+      installation,
+      release: acquireBabelDocRuntime(installation.runtimePath),
+    };
+  });
 }
 
 async function detectBabelDocInternal(): Promise<BabelDocInstallation> {
@@ -60,13 +74,13 @@ async function detectBabelDocInternal(): Promise<BabelDocInstallation> {
     manifest.babeldocVersion !== REQUIRED_BABELDOC_VERSION
   ) {
     throw new Error(
-      `当前插件需要 BabelDOC ${REQUIRED_BABELDOC_VERSION}、uv ${REQUIRED_UV_VERSION} 和 Python ${REQUIRED_PYTHON_VERSION}。请点击“配置 / 修复环境”。`,
+      `当前插件需要 BabelDOC ${REQUIRED_BABELDOC_VERSION}、uv ${REQUIRED_UV_VERSION} 和 Python ${REQUIRED_PYTHON_VERSION}。请点击“清理并重新部署”。`,
     );
   }
 
   const executablePath = getBabelDocExecutablePath(manifest.environmentPath);
   if (!(await pathExists(executablePath))) {
-    throw new Error(`插件专用 BabelDOC 环境不完整。请点击“配置 / 修复环境”。`);
+    throw new Error(`插件专用 BabelDOC 环境不完整。请点击“清理并重新部署”。`);
   }
 
   const result = await runExternalProcess(executablePath, ["--version"], {
@@ -75,7 +89,7 @@ async function detectBabelDocInternal(): Promise<BabelDocInstallation> {
   const version = parseVersion(result.stdout || result.stderr);
   if (result.exitCode !== 0 || version !== REQUIRED_BABELDOC_VERSION) {
     throw new Error(
-      `插件专用 BabelDOC 版本不匹配，检测到 ${version || "未知版本"}，需要 ${REQUIRED_BABELDOC_VERSION}。请点击“配置 / 修复环境”。`,
+      `插件专用 BabelDOC 版本不匹配，检测到 ${version || "未知版本"}，需要 ${REQUIRED_BABELDOC_VERSION}。请点击“清理并重新部署”。`,
     );
   }
 
@@ -97,17 +111,19 @@ export async function deployBabelDoc(): Promise<BabelDocInstallation> {
 }
 
 async function deployBabelDocInternal(): Promise<BabelDocInstallation> {
-  const uvPath = await ensureUv();
-  const runtimesDirectory = getManagedRuntimesDirectory();
-  await ensureDirectory(runtimesDirectory);
-  const deploymentSuffix = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-  const runtimeDirectory = joinPath(
-    runtimesDirectory,
-    `runtime-${RUNTIME_ID}-${deploymentSuffix}`,
-  );
-  const environmentPath = joinPath(runtimeDirectory, "venv");
-
+  await waitForNoActiveRuntimeUsers();
   try {
+    await clearManagedRuntimeRoot();
+    const uvPath = await ensureUv();
+    const runtimesDirectory = getManagedRuntimesDirectory();
+    await ensureDirectory(runtimesDirectory);
+    const deploymentSuffix = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    const runtimeDirectory = joinPath(
+      runtimesDirectory,
+      `runtime-${RUNTIME_ID}-${deploymentSuffix}`,
+    );
+    const environmentPath = joinPath(runtimeDirectory, "venv");
+
     await ensureDirectory(runtimeDirectory);
     await writeTextAtomically(
       joinPath(runtimeDirectory, "requirements.lock"),
@@ -155,6 +171,8 @@ async function deployBabelDocInternal(): Promise<BabelDocInstallation> {
       joinPath(runtimeDirectory, "requirements.lock"),
       "--python",
       pythonPath,
+      "--link-mode",
+      "copy",
       "--require-hashes",
       "--strict",
     ]);
@@ -170,6 +188,12 @@ async function deployBabelDocInternal(): Promise<BabelDocInstallation> {
       throw new Error(
         `部署完成后 BabelDOC 校验失败：检测到 ${version || "未知版本"}，需要 ${REQUIRED_BABELDOC_VERSION}。`,
       );
+    }
+
+    try {
+      await runUv(uvPath, ["cache", "clean"]);
+    } catch (error) {
+      ztoolkit.log("Failed to clean uv download cache", error);
     }
 
     const manifest: RuntimeManifest = {
@@ -192,7 +216,14 @@ async function deployBabelDocInternal(): Promise<BabelDocInstallation> {
       runtimePath: environmentPath,
     };
   } catch (error) {
-    await removeDirectory(runtimeDirectory);
+    try {
+      await clearManagedRuntimeRoot();
+    } catch (cleanupError) {
+      ztoolkit.log(
+        "Failed to clean incomplete BabelDOC deployment",
+        cleanupError,
+      );
+    }
     throw new Error(
       `BabelDOC 部署失败。${compactDiagnostic(error instanceof Error ? error.message : String(error))}`,
       { cause: error },
@@ -200,7 +231,7 @@ async function deployBabelDocInternal(): Promise<BabelDocInstallation> {
   }
 }
 
-export function acquireBabelDocRuntime(runtimePath: string): () => void {
+function acquireBabelDocRuntime(runtimePath: string): () => void {
   activeRuntimeUsers.set(
     runtimePath,
     (activeRuntimeUsers.get(runtimePath) || 0) + 1,
@@ -211,18 +242,31 @@ export function acquireBabelDocRuntime(runtimePath: string): () => void {
     released = true;
     const remaining = (activeRuntimeUsers.get(runtimePath) || 1) - 1;
     if (remaining > 0) activeRuntimeUsers.set(runtimePath, remaining);
-    else activeRuntimeUsers.delete(runtimePath);
+    else {
+      activeRuntimeUsers.delete(runtimePath);
+      if (activeRuntimeUsers.size === 0) {
+        for (const resolve of runtimeReleaseWaiters) resolve();
+        runtimeReleaseWaiters.clear();
+      }
+    }
     void cleanupActiveRuntimeAndStaleRuntimes();
   };
+}
+
+function waitForNoActiveRuntimeUsers(): Promise<void> {
+  if (activeRuntimeUsers.size === 0) return Promise.resolve();
+  return new Promise((resolve) => runtimeReleaseWaiters.add(resolve));
+}
+
+async function clearManagedRuntimeRoot(): Promise<void> {
+  const root = getManagedRuntimeRoot();
+  const io = getIOUtils();
+  if (await io.exists(root)) await io.remove(root, { recursive: true });
 }
 
 async function ensureUv(): Promise<string> {
   const managedPath = getManagedUvPath();
   if (await hasRequiredUvVersion(managedPath)) return managedPath;
-
-  for (const candidate of await getUvCandidates()) {
-    if (await hasRequiredUvVersion(candidate)) return candidate;
-  }
 
   await ensureDirectory(getManagedUvDirectory());
   const result =
@@ -254,40 +298,6 @@ async function ensureUv(): Promise<string> {
   return managedPath;
 }
 
-async function getUvCandidates(): Promise<string[]> {
-  const home = getHomeDirectory();
-  const executable = Services.appinfo.OS === "WINNT" ? "uv.exe" : "uv";
-  const candidates = [
-    joinPath(home, ".local", "bin", executable),
-    joinPath(home, ".cargo", "bin", executable),
-    ...(Services.appinfo.OS === "WINNT"
-      ? [joinPath(home, "AppData", "Local", "Programs", "uv", executable)]
-      : [
-          joinPath("/opt", "homebrew", "bin", executable),
-          joinPath("/usr", "local", "bin", executable),
-          joinPath("/usr", "bin", executable),
-        ]),
-  ];
-  const command =
-    Services.appinfo.OS === "WINNT" ? getWindowsWherePath() : "/bin/sh";
-  const args =
-    Services.appinfo.OS === "WINNT"
-      ? ["uv.exe"]
-      : ["-c", "command -v uv 2>/dev/null || true"];
-  try {
-    const result = await runExternalProcess(command, args);
-    candidates.push(
-      ...result.stdout
-        .split(/\r?\n/)
-        .map((path) => path.trim())
-        .filter(Boolean),
-    );
-  } catch {
-    // The explicit well-known paths above are enough when shell lookup is unavailable.
-  }
-  return [...new Set(candidates)];
-}
-
 async function hasRequiredUvVersion(path: string): Promise<boolean> {
   if (!(await pathExists(path))) return false;
   try {
@@ -310,6 +320,7 @@ async function runUv(path: string, args: string[]): Promise<void> {
     environment: {
       ...getManagedProcessEnvironment(),
       UV_PYTHON_INSTALL_DIR: getManagedPythonDirectory(),
+      UV_CACHE_DIR: joinPath(getManagedRuntimeRoot(), "uv-cache"),
     },
   });
   if (result.exitCode !== 0) {
@@ -465,12 +476,4 @@ function getWindowsPowerShellPath(): string {
     "v1.0",
     "powershell.exe",
   );
-}
-
-function getWindowsWherePath(): string {
-  const windowsDirectory = Services.dirsvc.get(
-    "WinD",
-    Components.interfaces.nsIFile,
-  ).path;
-  return joinPath(windowsDirectory, "System32", "where.exe");
 }

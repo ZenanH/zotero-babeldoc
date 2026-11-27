@@ -15,7 +15,7 @@ import {
   writeManagedConfig,
   writeTextAtomically,
 } from "./settings";
-import { acquireBabelDocRuntime, detectBabelDoc } from "./babeldoc";
+import { detectAndAcquireBabelDocRuntime } from "./babeldoc";
 import { runExternalProcess } from "./process";
 import { getSelectedPdfAttachment } from "./menu";
 import {
@@ -75,8 +75,9 @@ export async function translateSelectedPDF(win: Window): Promise<void> {
     }
 
     updateTranslationTask(attachment.id, "检测 BabelDOC");
-    const babeldoc = await detectBabelDoc();
-    releaseBabelDocRuntime = acquireBabelDocRuntime(babeldoc.runtimePath);
+    const runtime = await detectAndAcquireBabelDocRuntime();
+    const babeldoc = runtime.installation;
+    releaseBabelDocRuntime = runtime.release;
     taskDirectory = await createTaskDirectory();
     const outputDirectory = joinPath(taskDirectory, "output");
     const workingDirectory = joinPath(taskDirectory, "working");

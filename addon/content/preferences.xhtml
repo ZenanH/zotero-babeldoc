@@ -10,13 +10,16 @@
     <label><html:h3>翻译环境</html:h3></label>
     <description id="babeldoctranslator-babeldoc-status" />
     <hbox align="center" style="margin-top: 8px">
-      <button id="babeldoctranslator-deploy" label="配置 / 修复环境" />
+      <button id="babeldoctranslator-deploy" label="清理并重新部署" />
       <button
         id="babeldoctranslator-detect"
         label="检查环境"
         style="margin-left: 10px"
       />
     </hbox>
+    <description
+      >会先等待当前翻译任务结束，再清理插件托管目录并重新安装。字体和模型缓存也会删除，下次翻译时将重新下载。</description
+    >
   </groupbox>
 
   <groupbox>

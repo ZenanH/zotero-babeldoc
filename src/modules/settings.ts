@@ -175,7 +175,7 @@ export function getManagedBabelDocPythonPath(venvPath: string): string {
 }
 
 export function getManagedBabelDocInstallCommand(): string {
-  return "请在 Zotero 设置页点击“配置 / 修复环境”。";
+  return "请在 Zotero 设置页点击“清理并重新部署”。";
 }
 
 export function validateSettings(settings: TranslatorSettings): void {
