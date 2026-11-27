@@ -7,7 +7,7 @@ Zotero 10 插件：在本机调用 BabelDOC 翻译 PDF，并把翻译结果作�
 ## 功能
 
 - 在 PDF 附件右键菜单中启动翻译，多个 PDF 可以同时处理。
-- 在设置页填写完整的模型 Base URL、API Key 和模型名称；测试连接只访问 `/models`。
+- 模型接口支持 Chat Completions 和 Responses。测试连接会用当前填写的配置发送三次短词翻译请求。
 - 选择源语言、导出语言，以及仅译文或原文 + 译文 PDF。
 - 翻译过程在 Zotero 主窗口底部显示当前阶段和活动任务数。
 - BabelDOC 使用插件专用的 uv / Python 虚拟环境，不会修改系统环境。
@@ -16,7 +16,7 @@ Zotero 10 插件：在本机调用 BabelDOC 翻译 PDF，并把翻译结果作�
 
 1. 从 [Releases](https://github.com/ZenanH/zotero-babeldoc/releases/latest) 下载并安装 XPI。
 2. 打开 Zotero BabelDOC 设置页，点击“配置 / 修复环境”，等待状态变为“已完成”并确认环境路径。
-3. 填写完整的 Base URL（通常以 `/v1` 结尾，例如 `https://api.openai.com/v1`）、API Key 和模型名称，点击“测试连接”，然后保存设置。纯域名会提示补上 API 路径。
+3. 填写 Base URL（例如 `https://api.openai.com/v1`），不要填写 `/chat/completions` 或 `/responses` 的完整路径。API Key、模型名称和 API 格式也要填写。若模型不接收推理强度参数，选择“使用服务默认值（省略参数）”。“测试连接”会发送三次短词翻译请求。
 4. 填写源语言和导出语言。导出语言会同时写入 BabelDOC 配置、模型提示和输出文件匹配规则。
 5. 在文献下选中本地 PDF 附件，右键选择“使用 BabelDOC 翻译 PDF”。翻译结果会作为子附件导入。
 
@@ -25,13 +25,13 @@ Zotero 10 插件：在本机调用 BabelDOC 翻译 PDF，并把翻译结果作�
 
 ## 运行时
 
-插件不会在启动时自动安装运行时。用户点击设置页按钮后，插件在 `~/.babeldoc-translator/` 中配置固定版本的 uv、Python 和 BabelDOC，并在校验成功后写入活动运行时清单。当前版本 `0.1.26` 固定：
+插件不会在启动时自动安装运行时。用户点击设置页按钮后，插件在 `~/.babeldoc-translator/` 中配置固定版本的 uv、Python 和 BabelDOC，并在校验成功后写入活动运行时清单。当前版本 `0.1.27` 固定：
 
 | 组件                       | 版本                                                     |
 | -------------------------- | -------------------------------------------------------- |
 | uv                         | `0.12.23`                                                |
 | Python                     | `3.12.15`                                                |
-| BabelDOC                   | `0.6.4`                                                  |
+| BabelDOC                   | `0.7.1`                                                  |
 | 依赖锁文件                 | [`runtime/uv.lock`](runtime/uv.lock)                     |
 | 部署清单（版本 + SHA-256） | [`runtime/requirements.lock`](runtime/requirements.lock) |
 

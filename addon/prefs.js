@@ -1,4 +1,5 @@
 pref("base-url", "https://api.openai.com/v1");
+pref("api-mode", "chat-completions");
 pref("api-key", "");
 pref("model", "gpt-4o-mini");
 pref("reasoning-effort", "low");

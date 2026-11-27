@@ -1,6 +1,7 @@
 import {
   createTaskDirectory,
   getFileStem,
+  getManagedBabelDocPythonPath,
   getManagedProcessEnvironment,
   getIOUtils,
   getSettings,
@@ -10,6 +11,7 @@ import {
   renderBabelDocToml,
   buildBabelDocSystemPrompt,
   validateSettings,
+  usesResponsesApi,
   writeManagedConfig,
   writeTextAtomically,
 } from "./settings";
@@ -84,13 +86,26 @@ export async function translateSelectedPDF(win: Window): Promise<void> {
     await writeManagedConfig(settings);
     await writeTextAtomically(taskConfigPath, renderBabelDocToml(settings));
 
+    let command = babeldoc.path;
+    const launcherArgs: string[] = [];
+    if (usesResponsesApi(settings)) {
+      const launcherPath = joinPath(taskDirectory, "babeldoc-responses.py");
+      const launcher = await Zotero.File.getContentsFromURLAsync(
+        rootURI + "content/babeldoc-responses.py",
+      );
+      await writeTextAtomically(launcherPath, launcher);
+      command = getManagedBabelDocPythonPath(babeldoc.runtimePath);
+      launcherArgs.push(launcherPath);
+    }
+
     updateTranslationTask(
       attachment.id,
       `BabelDOC ${babeldoc.version}（${sourceLanguage} → ${targetLanguage}）翻译中`,
     );
     const result = await runExternalProcess(
-      babeldoc.path,
+      command,
       [
+        ...launcherArgs,
         "-c",
         taskConfigPath,
         "--files",

@@ -8,23 +8,22 @@ modifies a user's unrelated BabelDOC installation.
 
 ## Pinned runtime
 
-- Plugin version: `0.1.20`
+- Plugin version: `0.1.27`
 - Zotero: `10.*`
 - Node.js CI: `22`
 - pnpm CI: `11`
 - uv: `0.12.23`
 - Python: `3.12.15`
-- BabelDOC: `0.6.4`
-- MarkItDown: `0.1.6`
-- Runtime ID: `babeldoc-0.6.4-markitdown-0.1.6-python-3.12.15-uv-0.12.23-lock-v3`
+- BabelDOC: `0.7.1`
+- Runtime ID: `babeldoc-0.7.1-python-3.12.15-uv-0.12.23-lock-v5`
 - Dependency source: `runtime/pyproject.toml`
 - Resolver lock: `runtime/uv.lock`
 - Deployment lock with hashes: `runtime/requirements.lock`
 - Build entry point: `pnpm run build`
 - XPI output: `.scaffold/build/*.xpi`
 
-The lock was generated with uv 0.12.23. It contains the complete BabelDOC and
-MarkItDown dependency graph, platform markers, and SHA-256 hashes. `src/modules/runtimeLock.ts`
+The lock was generated with uv 0.12.23. It contains the complete BabelDOC
+dependency graph, platform markers, and SHA-256 hashes. `src/modules/runtimeLock.ts`
 is generated from `runtime/requirements.lock` during the build and must not be
 edited manually.
 
@@ -68,7 +67,7 @@ pnpm run build
 
 ## API test semantics
 
-The Preferences API button is intentionally a lightweight reachability check:
-it requests `/models` and reports whether an HTTP response was received. It
-does not claim that the API key or selected model is valid and must not make a
-billable model-completion request.
+The Preferences API button sends three short, non-streaming translation
+requests using the entered Base URL, API key, model, and API mode. It is an
+explicit user-triggered billable API check and must not send more than three
+requests.

@@ -34,9 +34,17 @@
           placeholder="https://api.openai.com/v1"
         />
         <description
-          >请填写完整 API 地址，通常以 /v1 结尾；例如
-          https://api.openai.com/v1。</description
+          >填写服务商提供的 API 根地址，通常以 /v1 结尾，例如
+          https://sudeng.cc/v1。不要填写 /chat/completions 或
+          /responses。</description
         >
+      </vbox>
+      <vbox style="margin-bottom: 8px">
+        <html:label for="babeldoctranslator-api-mode">API 格式</html:label>
+        <html:select id="babeldoctranslator-api-mode">
+          <html:option value="chat-completions">Chat Completions</html:option>
+          <html:option value="responses">Responses</html:option>
+        </html:select>
       </vbox>
       <vbox style="margin-bottom: 8px">
         <html:label for="babeldoctranslator-api-key">API Key</html:label>
@@ -66,6 +74,7 @@
           <html:option value="high">high</html:option>
           <html:option value="xhigh">xhigh</html:option>
           <html:option value="max">max</html:option>
+          <html:option value="omit">使用服务默认值（省略参数）</html:option>
         </html:select>
         <description>按模型服务商支持的推理强度选择。</description>
       </vbox>

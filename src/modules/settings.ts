@@ -6,7 +6,9 @@ export const REQUIRED_PYTHON_VERSION = config.pythonVersion;
 export const RUNTIME_ID = config.runtimeId;
 
 export type TranslationOutputMode = "mono" | "dual";
-export type ReasoningEffort = "low" | "medium" | "high" | "xhigh" | "max";
+export type ReasoningEffort =
+  "low" | "medium" | "high" | "xhigh" | "max" | "omit";
+export type ApiMode = "chat-completions" | "responses";
 
 const CHINESE_LANGUAGE_ALIASES = new Set([
   "zh",
@@ -21,6 +23,7 @@ const CHINESE_LANGUAGE_ALIASES = new Set([
 
 export interface TranslatorSettings {
   baseUrl: string;
+  apiMode: ApiMode;
   apiKey: string;
   model: string;
   reasoningEffort: ReasoningEffort;
@@ -34,6 +37,7 @@ export interface TranslatorSettings {
 
 export const DEFAULT_SETTINGS: TranslatorSettings = {
   baseUrl: "https://api.openai.com/v1",
+  apiMode: "chat-completions",
   apiKey: "",
   model: "gpt-4o-mini",
   reasoningEffort: "low",
@@ -73,6 +77,10 @@ export function getSettings(): TranslatorSettings {
   );
   return {
     baseUrl: getPref("base-url", DEFAULT_SETTINGS.baseUrl).trim(),
+    apiMode:
+      getPref<string>("api-mode", DEFAULT_SETTINGS.apiMode) === "responses"
+        ? "responses"
+        : "chat-completions",
     apiKey: getPref("api-key", DEFAULT_SETTINGS.apiKey).trim(),
     model: getPref("model", DEFAULT_SETTINGS.model).trim(),
     reasoningEffort: normalizeReasoningEffort(
@@ -100,6 +108,7 @@ export function getSettings(): TranslatorSettings {
 
 export function saveSettings(settings: TranslatorSettings): void {
   setPref("base-url", settings.baseUrl.trim());
+  setPref("api-mode", settings.apiMode);
   setPref("api-key", settings.apiKey.trim());
   setPref("model", settings.model.trim());
   setPref(
@@ -195,9 +204,27 @@ export function validateBaseUrl(baseUrl: string): void {
   if (url.protocol !== "http:" && url.protocol !== "https:") {
     throw new Error("Base URL 只支持 http 或 https。");
   }
-  if (url.pathname === "/") {
+  if (url.search || url.hash) {
+    throw new Error("Base URL 请使用不带查询参数或片段的 API 地址。");
+  }
+  if (new URL(getApiBaseUrl(baseUrl)).pathname === "/") {
     throw new Error("Base URL 缺少 API 路径；通常需要在域名后加 /v1。");
   }
+}
+
+export function getApiBaseUrl(baseUrl: string): string {
+  const url = new URL(baseUrl);
+  url.pathname = url.pathname
+    .replace(/\/+$/, "")
+    .replace(/\/(?:responses|chat\/completions)$/, "");
+  return url.href.replace(/\/$/, "");
+}
+
+export function usesResponsesApi(settings: TranslatorSettings): boolean {
+  return (
+    settings.apiMode === "responses" ||
+    /\/responses\/*$/.test(new URL(settings.baseUrl).pathname)
+  );
 }
 
 export function getPathUtils(): any {
@@ -312,8 +339,12 @@ export function renderBabelDocToml(settings: TranslatorSettings): string {
     `watermark-output-mode = ${tomlString(settings.watermarkOutputMode)}`,
     "openai = true",
     `openai-model = ${tomlString(settings.model)}`,
-    `openai-reasoning = ${tomlString(normalizeReasoningEffort(settings.reasoningEffort))}`,
-    `openai-base-url = ${tomlString(settings.baseUrl.replace(/\/+$/, ""))}`,
+    ...(settings.reasoningEffort === "omit"
+      ? []
+      : [
+          `openai-reasoning = ${tomlString(normalizeReasoningEffort(settings.reasoningEffort))}`,
+        ]),
+    `openai-base-url = ${tomlString(getApiBaseUrl(settings.baseUrl))}`,
     `openai-api-key = ${tomlString(settings.apiKey)}`,
     `no-send-temperature = ${/^(?:gpt-(?:[5-9]|\d{2,})(?:[.-]|$)|o[1-9](?:[.-]|$))/i.test(settings.model)}`,
     `custom-system-prompt = ${tomlString(customSystemPrompt)}`,
@@ -335,6 +366,7 @@ function normalizeReasoningEffort(value: string): ReasoningEffort {
     "high",
     "xhigh",
     "max",
+    "omit",
   ];
   return supportedEfforts.includes(value as ReasoningEffort)
     ? (value as ReasoningEffort)

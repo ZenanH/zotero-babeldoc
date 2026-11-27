@@ -3,6 +3,7 @@ import {
   getSettings,
   saveSettings,
   TranslatorSettings,
+  usesResponsesApi,
   validateBaseUrl,
   validateSettings,
   writeManagedConfig,
@@ -13,6 +14,7 @@ export async function registerPrefsScripts(win: Window): Promise<void> {
   const document = win.document;
   const settings = getSettings();
   setValue(document, "babeldoctranslator-base-url", settings.baseUrl);
+  setValue(document, "babeldoctranslator-api-mode", settings.apiMode);
   setValue(document, "babeldoctranslator-api-key", settings.apiKey);
   setValue(document, "babeldoctranslator-model", settings.model);
   setValue(
@@ -79,7 +81,11 @@ export async function registerPrefsScripts(win: Window): Promise<void> {
 
   baseUrlInput.addEventListener("blur", () => {
     try {
-      validateBaseUrl(baseUrlInput.value.trim());
+      const settings = readForm(document);
+      validateBaseUrl(settings.baseUrl);
+      if (usesResponsesApi(settings)) {
+        setValue(document, "babeldoctranslator-api-mode", "responses");
+      }
       setStatus(status, "Base URL 格式已检查；可点击“测试连接”。", "neutral");
     } catch (error) {
       setStatus(
@@ -180,6 +186,10 @@ async function refreshBabelDocStatus(
 function readForm(document: Document): TranslatorSettings {
   return {
     baseUrl: getValue(document, "babeldoctranslator-base-url"),
+    apiMode:
+      getValue(document, "babeldoctranslator-api-mode") === "responses"
+        ? "responses"
+        : "chat-completions",
     apiKey: getValue(document, "babeldoctranslator-api-key"),
     model: getValue(document, "babeldoctranslator-model"),
     reasoningEffort: getValue(
